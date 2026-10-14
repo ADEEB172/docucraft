@@ -1,16 +1,11 @@
-import {
-  degrees,
-  PDFDocument,
-  rgb,
-  StandardFonts,
-} from "pdf-lib";
+import { degrees, PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import type {
   ImageWatermark,
   Signature,
   Watermark,
 } from "../components/pdf/PdfViewer";
 
-function getPdfPosition(
+export function getPdfPosition(
   x: number,
   y: number,
   cropBox: { x: number; y: number; width: number; height: number },
@@ -64,7 +59,9 @@ function getPdfColor(hexColor: string) {
 }
 
 function getPngBytes(imageData: string) {
-  const imageParts = /^data:image\/png;base64,([A-Za-z0-9+/=]+)$/.exec(imageData);
+  const imageParts = /^data:image\/png;base64,([A-Za-z0-9+/=]+)$/.exec(
+    imageData,
+  );
 
   if (!imageParts) {
     throw new Error("A signature image is invalid. Please draw it again.");
@@ -121,15 +118,20 @@ export async function createWatermarkedPdf(
   }
 
   const font = await pdfDocument.embedFont(StandardFonts.HelveticaBold);
+  const pageCount = pdfDocument.getPageCount();
 
   for (const watermark of watermarks) {
-    const page = pdfDocument.getPage(watermark.pageNumber - 1);
-
-    if (!page) {
+    if (
+      !Number.isInteger(watermark.pageNumber) ||
+      watermark.pageNumber < 1 ||
+      watermark.pageNumber > pageCount
+    ) {
       throw new Error(
         `A watermark refers to missing page ${watermark.pageNumber}.`,
       );
     }
+
+    const page = pdfDocument.getPage(watermark.pageNumber - 1);
 
     const cropBox = page.getCropBox();
     const pageRotation = ((page.getRotation().angle % 360) + 360) % 360;
@@ -156,7 +158,10 @@ export async function createWatermarkedPdf(
         );
       }
 
-      if (!Number.isFinite(watermark.aspectRatio) || watermark.aspectRatio <= 0) {
+      if (
+        !Number.isFinite(watermark.aspectRatio) ||
+        watermark.aspectRatio <= 0
+      ) {
         throw new Error("A watermark image has invalid dimensions.");
       }
 
@@ -237,15 +242,18 @@ export async function createWatermarkedPdf(
       rotate: degrees(textRotation),
     });
   }
-
   for (const signature of signatures) {
-    const page = pdfDocument.getPage(signature.pageNumber - 1);
-
-    if (!page) {
+    if (
+      !Number.isInteger(signature.pageNumber) ||
+      signature.pageNumber < 1 ||
+      signature.pageNumber > pageCount
+    ) {
       throw new Error(
         `A signature refers to missing page ${signature.pageNumber}.`,
       );
     }
+
+    const page = pdfDocument.getPage(signature.pageNumber - 1);
 
     const cropBox = page.getCropBox();
     const pageRotation = ((page.getRotation().angle % 360) + 360) % 360;
@@ -264,8 +272,13 @@ export async function createWatermarkedPdf(
         );
       }
 
-      if (!Number.isFinite(signature.displayScale) || signature.displayScale <= 0) {
-        throw new Error("Could not determine the PDF preview scale for a signature.");
+      if (
+        !Number.isFinite(signature.displayScale) ||
+        signature.displayScale <= 0
+      ) {
+        throw new Error(
+          "Could not determine the PDF preview scale for a signature.",
+        );
       }
 
       const fontSize = signature.fontSize / signature.displayScale;

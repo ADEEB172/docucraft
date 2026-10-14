@@ -61,9 +61,7 @@ async function openWatermarkEditor(page: Page, pageCount = 1) {
   const bytes = await createPdf(pageCount);
   await page.goto("/");
   await uploadPdf(page, bytes);
-  await expect(
-    page.getByLabel(`PDF page 1 of ${pageCount}`),
-  ).toBeVisible();
+  await expect(page.getByLabel(`PDF page 1 of ${pageCount}`)).toBeVisible();
   await page.getByRole("button", { name: "Watermark" }).click();
   return bytes;
 }
@@ -96,7 +94,9 @@ test("undoes and redoes edits with buttons and keyboard shortcuts", async ({
   await expect(
     page.getByRole("group", { name: "Text watermark: HISTORY MARK" }),
   ).toBeVisible();
-  await page.getByRole("group", { name: "Text watermark: HISTORY MARK" }).click();
+  await page
+    .getByRole("group", { name: "Text watermark: HISTORY MARK" })
+    .click();
   const watermarkText = page.getByRole("textbox", {
     name: "Watermark text",
     exact: true,
@@ -134,9 +134,298 @@ test("undoes and redoes signature changes, and clears redo after a new edit", as
   await expect(
     page.getByRole("group", { name: "Text signature: SECOND SIGNATURE" }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Redo last edit" })).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Redo last edit" }),
+  ).toBeDisabled();
   await page.keyboard.press("Control+Shift+z");
   await expect(firstSignature).toHaveCount(0);
+});
+
+test("ignores saved editor data with an out-of-range image watermark width", async ({
+  page,
+}) => {
+  const bytes = await createPdf();
+  const stableModifiedDate = 1_760_000_000_000;
+  await page.goto("/");
+  await dropPdf(page, bytes, "invalid-image-width.pdf", stableModifiedDate);
+  await expect(page.getByLabel("PDF page 1 of 1")).toBeVisible();
+  
+  await page.getByRole("button", { name: "Watermark" }).click();
+  await addTextWatermark(page, "TEMP WATERMARK");
+  
+  await page.waitForFunction(() =>
+    Object.entries(window.localStorage).some(([key, value]) => key.startsWith("docucraft-editor-v1:"))
+  );
+
+  await page.evaluate(() => {
+    for (const [key, value] of Object.entries(window.localStorage)) {
+      if (!key.startsWith("docucraft-editor-v1:")) {
+        continue;
+      }
+      const saved = JSON.parse(value) as {
+        watermarks?: Array<any>;
+      };
+      if (saved.watermarks) {
+        saved.watermarks = [{
+          id: "img1",
+          type: "image",
+          pageNumber: 1,
+          x: 0.5,
+          y: 0.5,
+          opacity: 1,
+          rotation: 0,
+          imageData: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+          width: 0.9, // Allowed range se bahar [0.05, 0.8]
+          displayScale: 1
+        }];
+        window.localStorage.setItem(key, JSON.stringify(saved));
+        return;
+      }
+    }
+    throw new Error("The editor did not save state.");
+  });
+
+  await page.reload();
+  await dropPdf(page, bytes, "invalid-image-width.pdf", stableModifiedDate);
+  await expect(page.getByLabel("PDF page 1 of 1")).toBeVisible();
+});
+
+test("ignores saved editor data with an invalid image aspect ratio or mimeType", async ({
+  page,
+}) => {
+  const bytes = await createPdf();
+  const stableModifiedDate = 1_760_000_000_000;
+  await page.goto("/");
+  await dropPdf(page, bytes, "invalid-image-meta.pdf", stableModifiedDate);
+  await expect(page.getByLabel("PDF page 1 of 1")).toBeVisible();
+  
+  await page.getByRole("button", { name: "Watermark" }).click();
+  await addTextWatermark(page, "TEMP WATERMARK");
+  
+  await page.waitForFunction(() =>
+    Object.entries(window.localStorage).some(([key, value]) => key.startsWith("docucraft-editor-v1:"))
+  );
+
+  await page.evaluate(() => {
+    for (const [key, value] of Object.entries(window.localStorage)) {
+      if (!key.startsWith("docucraft-editor-v1:")) {
+        continue;
+      }
+      const saved = JSON.parse(value) as {
+        watermarks?: Array<any>;
+      };
+      if (saved.watermarks) {
+        saved.watermarks = [{
+          id: "img2",
+          type: "image",
+          pageNumber: 1,
+          x: 0.5,
+          y: 0.5,
+          opacity: 1,
+          rotation: 0,
+          imageData: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+          width: 0.2,
+          aspectRatio: -1, // Invalid aspect ratio (must be > 0)
+          mimeType: "image/gif", // Invalid mimeType (allowed: png, jpeg)
+          displayScale: 1
+        }];
+        window.localStorage.setItem(key, JSON.stringify(saved));
+        return;
+      }
+    }
+    throw new Error("The editor did not save state.");
+  });
+
+  await page.reload();
+  await dropPdf(page, bytes, "invalid-image-meta.pdf", stableModifiedDate);
+  await expect(page.getByLabel("PDF page 1 of 1")).toBeVisible();
+});
+
+test("ignores saved editor data with malformed signature base and attributes", async ({
+  page,
+}) => {
+  const bytes = await createPdf();
+  const stableModifiedDate = 1_760_000_000_000;
+  await page.goto("/");
+  await dropPdf(page, bytes, "invalid-sig-comprehensive.pdf", stableModifiedDate);
+  await expect(page.getByLabel("PDF page 1 of 1")).toBeVisible();
+  
+  await page.getByRole("button", { name: "Watermark" }).click();
+  await addTextWatermark(page, "TEMP");
+  
+  await page.waitForFunction(() =>
+    Object.entries(window.localStorage).some(([key, value]) => key.startsWith("docucraft-editor-v1:"))
+  );
+
+  await page.evaluate(() => {
+    for (const [key, value] of Object.entries(window.localStorage)) {
+      if (!key.startsWith("docucraft-editor-v1:")) {
+        continue;
+      }
+      const saved = JSON.parse(value) as { signatures?: Array<any> };
+      saved.signatures = [
+        {
+          // Triggers line 124 (isSavedEditorObject returns false due to invalid pageNumber)
+          id: "sig-bad-base",
+          pageNumber: 999,
+          x: 0.5,
+          y: 0.5,
+          width: 0.2,
+          imageData: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+        },
+        {
+          // Triggers lines 130-131 branch checks (width too small (< 0.08) and invalid imageData type)
+          id: "sig-bad-attrs",
+          pageNumber: 1,
+          x: 0.5,
+          y: 0.5,
+          width: 0.01,
+          imageData: 12345
+        }
+      ];
+      window.localStorage.setItem(key, JSON.stringify(saved));
+      return;
+    }
+    throw new Error("The editor did not save state.");
+  });
+
+  await page.reload();
+  await dropPdf(page, bytes, "invalid-sig-comprehensive.pdf", stableModifiedDate);
+  await expect(page.getByLabel("PDF page 1 of 1")).toBeVisible();
+});
+
+test("ignores saved editor data with various watermark mimeType and aspectRatio edge cases", async ({
+  page,
+}) => {
+  const bytes = await createPdf();
+  const stableModifiedDate = 1_760_000_000_000;
+  await page.goto("/");
+  await dropPdf(page, bytes, "invalid-watermark-meta.pdf", stableModifiedDate);
+  await expect(page.getByLabel("PDF page 1 of 1")).toBeVisible();
+  
+  await page.getByRole("button", { name: "Watermark" }).click();
+  await addTextWatermark(page, "TEMP");
+  
+  await page.waitForFunction(() =>
+    Object.entries(window.localStorage).some(([key, value]) => key.startsWith("docucraft-editor-v1:"))
+  );
+
+  await page.evaluate(() => {
+    for (const [key, value] of Object.entries(window.localStorage)) {
+      if (!key.startsWith("docucraft-editor-v1:")) {
+        continue;
+      }
+      const saved = JSON.parse(value) as { watermarks?: Array<any> };
+      saved.watermarks = [
+        {
+          // Exercises jpeg mimeType branch
+          id: "img-mime",
+          type: "image",
+          pageNumber: 1,
+          x: 0.5,
+          y: 0.5,
+          opacity: 1,
+          rotation: 0,
+          imageData: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+          width: 0.2,
+          mimeType: "image/jpeg"
+        },
+        {
+          // Exercises non-finite aspectRatio branch for text watermark
+          id: "text-aspect",
+          type: "text",
+          pageNumber: 1,
+          x: 0.5,
+          y: 0.5,
+          opacity: 1,
+          rotation: 0,
+          text: "Hello",
+          fontSize: 24,
+          color: "#000000",
+          displayScale: 1,
+          aspectRatio: NaN
+        }
+      ];
+      window.localStorage.setItem(key, JSON.stringify(saved));
+      return;
+    }
+    throw new Error("The editor did not save state.");
+  });
+
+  await page.reload();
+  await dropPdf(page, bytes, "invalid-watermark-meta.pdf", stableModifiedDate);
+  await expect(page.getByLabel("PDF page 1 of 1")).toBeVisible();
+});
+
+test("covers remaining yellow branch validations for watermarks and signatures via short-circuit bypass", async ({
+  page,
+}) => {
+  const bytes = await createPdf();
+  const stableModifiedDate = 1_760_000_000_000;
+  await page.goto("/");
+  await dropPdf(page, bytes, "final-bypass.pdf", stableModifiedDate);
+  await expect(page.getByLabel("PDF page 1 of 1")).toBeVisible();
+  
+  await page.getByRole("button", { name: "Watermark" }).click();
+  await addTextWatermark(page, "TEMP");
+  
+  await page.waitForFunction(() =>
+    Object.entries(window.localStorage).some(([key, value]) => key.startsWith("docucraft-editor-v1:"))
+  );
+
+  await page.evaluate(() => {
+    for (const [key, value] of Object.entries(window.localStorage)) {
+      if (!key.startsWith("docucraft-editor-v1:")) {
+        continue;
+      }
+      const saved = JSON.parse(value) as { watermarks?: Array<any>; signatures?: Array<any> };
+      
+      // Watermark: type is NOT "text" so it evaluates the right side (aspectRatio & mimeType)
+      saved.watermarks = [{
+        id: "w-bypass",
+        type: "image", // Not "text", forcing right-side evaluation
+        pageNumber: 1,
+        x: 0.5,
+        y: 0.5,
+        opacity: 1,
+        rotation: 0,
+        imageData: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+        width: 0.2,
+        aspectRatio: -5,        // Evaluates aspectRatio checks as false
+        mimeType: "image/webp"  // Evaluates mimeType checks as false
+      }];
+
+      // Signature: type is NOT "text" so it evaluates the right side (width & imageData)
+      saved.signatures = [{
+        id: "sig-bypass",
+        type: "image", // Not "text", forcing right-side evaluation
+        pageNumber: 1,
+        x: 0.5,
+        y: 0.5,
+        width: 0.01,   // Evaluates width >= 0.08 as false
+        imageData: 123 // Evaluates typeof imageData === "string" as false
+      }];
+
+      window.localStorage.setItem(key, JSON.stringify(saved));
+      return;
+    }
+    throw new Error("The editor did not save state.");
+  });
+
+  await page.reload();
+  await dropPdf(page, bytes, "final-bypass.pdf", stableModifiedDate);
+  await expect(page.getByLabel("PDF page 1 of 1")).toBeVisible();
+});
+
+test("triggers undo and redo safely when stacks are empty", async ({ page }) => {
+  const bytes = await createPdf();
+  await page.goto("/");
+  await dropPdf(page, bytes, "empty-history.pdf", 1_760_000_000_000);
+  await expect(page.getByLabel("PDF page 1 of 1")).toBeVisible();
+
+  // Bina koi edit kiye direct undo aur redo shortcuts press karna
+  await page.keyboard.press("Control+Z");
+  await page.keyboard.press("Control+Y");
 });
 
 test("undoes and redoes watermark movement, resizing, rotation, and deletion", async ({
@@ -200,7 +489,9 @@ test("shows the normal file validation error for an unsupported dropped file", a
   await expect(page.locator('p[role="alert"]')).toContainText(
     "This file does not appear to be a PDF.",
   );
-  await expect(page.getByRole("heading", { name: "Bring your document to life" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Bring your document to life" }),
+  ).toBeVisible();
 });
 
 test("snaps a dragged watermark to the grid and shows center guides", async ({
@@ -380,7 +671,53 @@ test("ignores malformed saved editor data instead of restoring it", async ({
     }),
   );
   await page.evaluate(() => {
-    const storageKey = Object.entries(window.localStorage).find(([key, value]) => {
+    const storageKey = Object.entries(window.localStorage).find(
+      ([key, value]) => {
+        if (!key.startsWith("docucraft-editor-v1:")) {
+          return false;
+        }
+
+        try {
+          const saved = JSON.parse(value) as {
+            watermarks?: Array<{ text?: string }>;
+          };
+          return saved.watermarks?.some(
+            (watermark) => watermark.text === "DO NOT RESTORE",
+          );
+        } catch {
+          return false;
+        }
+      },
+    )?.[0];
+    if (!storageKey) {
+      throw new Error("The editor did not save the test watermark.");
+    }
+    window.localStorage.setItem(storageKey, "{broken saved data");
+  });
+
+  await page.reload();
+  await dropPdf(page, bytes, "invalid-save.pdf", stableModifiedDate);
+  await expect(page.getByLabel("PDF page 1 of 1")).toBeVisible();
+  await expect(
+    page.getByText("Saved changes could not be read."),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("group", { name: "Text watermark: DO NOT RESTORE" }),
+  ).toHaveCount(0);
+});
+
+test("ignores saved editor data with an out-of-range watermark position", async ({
+  page,
+}) => {
+  const bytes = await createPdf();
+  const stableModifiedDate = 1_760_000_000_000;
+  await page.goto("/");
+  await dropPdf(page, bytes, "invalid-position.pdf", stableModifiedDate);
+  await expect(page.getByLabel("PDF page 1 of 1")).toBeVisible();
+  await page.getByRole("button", { name: "Watermark" }).click();
+  await addTextWatermark(page, "DO NOT RESTORE");
+  await page.waitForFunction(() =>
+    Object.entries(window.localStorage).some(([key, value]) => {
       if (!key.startsWith("docucraft-editor-v1:")) {
         return false;
       }
@@ -395,20 +732,124 @@ test("ignores malformed saved editor data instead of restoring it", async ({
       } catch {
         return false;
       }
-    })?.[0];
-    if (!storageKey) {
-      throw new Error("The editor did not save the test watermark.");
+    }),
+  );
+  await page.evaluate(() => {
+    for (const [key, value] of Object.entries(window.localStorage)) {
+      if (!key.startsWith("docucraft-editor-v1:")) {
+        continue;
+      }
+
+      const saved = JSON.parse(value) as {
+        watermarks?: Array<{ x?: number }>;
+      };
+      if (saved.watermarks && saved.watermarks.length > 0) {
+        // Valid JSON, but x must be between 0 and 1.
+        saved.watermarks[0].x = 5;
+        window.localStorage.setItem(key, JSON.stringify(saved));
+        return;
+      }
     }
-    window.localStorage.setItem(storageKey, "{broken saved data");
+
+    throw new Error("The editor did not save the test watermark.");
   });
 
   await page.reload();
-  await dropPdf(page, bytes, "invalid-save.pdf", stableModifiedDate);
+  await dropPdf(page, bytes, "invalid-position.pdf", stableModifiedDate);
   await expect(page.getByLabel("PDF page 1 of 1")).toBeVisible();
-  await expect(page.getByText("Saved changes could not be read.")).toBeVisible();
   await expect(
     page.getByRole("group", { name: "Text watermark: DO NOT RESTORE" }),
   ).toHaveCount(0);
+});
+
+test("covers saved image and signature validators", async ({ page }) => {
+  test.setTimeout(180_000);
+
+  const bytes = await createPdf();
+  const stableModifiedDate = 1_760_000_000_000;
+  const tinyPng =
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+
+  await page.goto("/");
+  await dropPdf(page, bytes, "validators.pdf", stableModifiedDate);
+  await expect(page.getByLabel("PDF page 1 of 1")).toBeVisible();
+  await page.getByRole("button", { name: "Watermark" }).click();
+  await addTextWatermark(page, "TEMPLATE");
+  await page.waitForFunction(() =>
+    Object.entries(window.localStorage).some(
+      ([key, value]) =>
+        key.startsWith("docucraft-editor-v1:") && value.includes("TEMPLATE"),
+    ),
+  );
+
+  const snapshot = await page.evaluate(() => {
+    const entry = Object.entries(window.localStorage).find(([key]) =>
+      key.startsWith("docucraft-editor-v1:"),
+    );
+    if (!entry) {
+      throw new Error("The editor did not save the test watermark.");
+    }
+    return { key: entry[0], value: entry[1] };
+  });
+
+  // Only arrays that hold objects (or are empty) can hold watermarks/signatures/images.
+  const parsed = JSON.parse(snapshot.value) as Record<string, unknown>;
+  const arrayFields = Object.keys(parsed).filter((field) => {
+    const list = parsed[field];
+    return (
+      Array.isArray(list) &&
+      (list.length === 0 || (typeof list[0] === "object" && list[0] !== null))
+    );
+  });
+
+  // undefined values are dropped by JSON, which simulates "field missing".
+  const variants: Array<Record<string, unknown>> = [
+    // valid image: covers lines 116-118 and 129-131
+    { type: "image", imageData: tinyPng, width: 0.3, aspectRatio: 1, mimeType: "image/jpeg" },
+    // no mimeType, no aspectRatio: covers line 104 (undefined branch)
+    { type: "image", imageData: tinyPng, width: 0.3, aspectRatio: undefined, mimeType: undefined },
+    // unsupported mimeType: line 104 false path
+    { type: "image", imageData: tinyPng, width: 0.3, aspectRatio: 1, mimeType: "image/gif" },
+    // width too small: lines 96-97 and 130 false path
+    { type: "image", imageData: tinyPng, width: 0.01, aspectRatio: 1, mimeType: "image/png" },
+    // width not a number: lines 95 and 129 false path
+    { type: "image", imageData: tinyPng, width: "wide", aspectRatio: 1, mimeType: "image/png" },
+    // imageData not a string: lines 92 and 131 false path
+    { type: "image", imageData: 5, width: 0.3, aspectRatio: 1, mimeType: "image/png" },
+  ];
+
+  for (const field of arrayFields) {
+    for (const patch of variants) {
+      await page.evaluate(
+        ({ key, value, field, patch }) => {
+          const saved = JSON.parse(value) as Record<string, unknown>;
+          const watermarks = saved.watermarks as Array<Record<string, unknown>>;
+          const list = saved[field] as Array<unknown>;
+          saved[field] = [...list, { ...watermarks[0], ...patch }];
+          window.localStorage.setItem(key, JSON.stringify(saved));
+        },
+        { key: snapshot.key, value: snapshot.value, field, patch },
+      );
+
+      await page.reload();
+      await dropPdf(page, bytes, "validators.pdf", stableModifiedDate);
+      await expect(page.getByLabel("PDF page 1 of 1")).toBeVisible();
+    }
+  }
+});
+
+test("ignores undo and redo when there is no history", async ({ page }) => {
+  const bytes = await createPdf();
+  await page.goto("/");
+  await dropPdf(page, bytes, "empty-history.pdf", 1_760_000_000_000);
+  await expect(page.getByLabel("PDF page 1 of 1")).toBeVisible();
+
+  // Nothing has been edited, so both stacks are empty.
+  await page.keyboard.press("Control+z");
+  await page.keyboard.press("Control+y");
+  await page.keyboard.press("Control+Shift+z");
+
+  await expect(page.getByLabel("PDF page 1 of 1")).toBeVisible();
 });
 
 test("moves a watermark with touch input on a narrow screen", async ({

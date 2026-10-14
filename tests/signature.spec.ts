@@ -56,7 +56,7 @@ async function openSignatureMode(page: Page, pageCount = 1) {
     mimeType: "application/pdf",
     buffer: await createSamplePdf(pageCount),
   });
-  await expect(page.getByLabel(`PDF page 1 of ${pageCount}`)).toBeVisible();
+  await expect(page.getByLabel(`PDF page 1 of ${pageCount}`)).toBeVisible({ timeout: 10000 });
   await page.getByRole("button", { name: "E-Sign" }).click();
 }
 

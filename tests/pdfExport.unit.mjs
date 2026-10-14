@@ -4,7 +4,7 @@ import { after, test } from "node:test";
 import { resolve } from "node:path";
 import { PDFDocument } from "pdf-lib";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
-import { createWatermarkedPdf } from "./.pdfExport.instrumented.mjs";
+import { createWatermarkedPdf ,getPdfPosition } from "./.pdfExport.instrumented.mjs";
 
 const sourcePath = resolve("src/lib/pdfExport.ts");
 const coveragePath = resolve(".nyc_output/pdfExport-unit.json");
@@ -104,6 +104,46 @@ test("exports text watermarks and signatures into the PDF page", async () => {
   }
 });
 
+test("rejects a watermark that refers to a missing page", async () => {
+  await assert.rejects(
+    createWatermarkedPdf(
+      await createPdfFile(),
+      [{ ...textWatermark(), pageNumber: 5 }],
+      [],
+    ),
+    /A watermark refers to missing page 5\./,
+  );
+});
+
+test("rejects a watermark with page number 0", async () => {
+  await assert.rejects(
+    createWatermarkedPdf(
+      await createPdfFile(),
+      [{ ...textWatermark(), pageNumber: 0 }],
+      [],
+    ),
+    /A watermark refers to missing page 0\./,
+  );
+});
+
+test("rejects a signature that refers to a missing page", async () => {
+  await assert.rejects(
+    createWatermarkedPdf(
+      await createPdfFile(),
+      [],
+      [{ ...textSignature(), pageNumber: 5 }],
+    ),
+    /A signature refers to missing page 5\./,
+  );
+});
+
+test("rejects an unsupported page rotation", () => {
+  assert.throws(
+    () => getPdfPosition(0.5, 0.5, { x: 0, y: 0, width: 200, height: 400 }, 45),
+    /This PDF page has an unsupported rotation\./,
+  );
+});
+
 test("reports an error when the source PDF cannot be loaded", async (context) => {
   context.mock.method(console, "error", () => {});
   const invalidPdf = await createPdfFile(Buffer.from("not a PDF"));
@@ -116,10 +156,9 @@ test("reports an error when the source PDF cannot be loaded", async (context) =>
 
 test("rejects an invalid watermark text color", async () => {
   await assert.rejects(
-    createWatermarkedPdf(
-      await createPdfFile(),
-      [textWatermark({ color: "blue" })],
-    ),
+    createWatermarkedPdf(await createPdfFile(), [
+      textWatermark({ color: "blue" }),
+    ]),
     /invalid text color/,
   );
 });
@@ -127,10 +166,9 @@ test("rejects an invalid watermark text color", async () => {
 test("rejects watermark image data with the wrong type prefix", async (context) => {
   context.mock.method(console, "error", () => {});
   await assert.rejects(
-    createWatermarkedPdf(
-      await createPdfFile(),
-      [imageWatermark({ imageData: "data:text/plain;base64,AAAA" })],
-    ),
+    createWatermarkedPdf(await createPdfFile(), [
+      imageWatermark({ imageData: "data:text/plain;base64,AAAA" }),
+    ]),
     /Could not add a watermark image/,
   );
 });
@@ -143,10 +181,9 @@ test("rejects watermark image data with an empty or invalid base64 value", async
     "data:image/png;base64,%%% ",
   ]) {
     await assert.rejects(
-      createWatermarkedPdf(
-        await createPdfFile(),
-        [imageWatermark({ imageData })],
-      ),
+      createWatermarkedPdf(await createPdfFile(), [
+        imageWatermark({ imageData }),
+      ]),
       /Could not add a watermark image/,
     );
   }
@@ -155,30 +192,27 @@ test("rejects watermark image data with an empty or invalid base64 value", async
 test("rejects image data that cannot be embedded as a PNG", async (context) => {
   context.mock.method(console, "error", () => {});
   await assert.rejects(
-    createWatermarkedPdf(
-      await createPdfFile(),
-      [imageWatermark({ imageData: "data:image/png;base64,bm90cG5n" })],
-    ),
+    createWatermarkedPdf(await createPdfFile(), [
+      imageWatermark({ imageData: "data:image/png;base64,bm90cG5n" }),
+    ]),
     /Could not add a watermark image/,
   );
 });
 
 test("rejects an image watermark with invalid dimensions", async () => {
   await assert.rejects(
-    createWatermarkedPdf(
-      await createPdfFile(),
-      [imageWatermark({ aspectRatio: 0 })],
-    ),
+    createWatermarkedPdf(await createPdfFile(), [
+      imageWatermark({ aspectRatio: 0 }),
+    ]),
     /invalid dimensions/,
   );
 });
 
 test("rejects a text watermark without a valid preview scale", async () => {
   await assert.rejects(
-    createWatermarkedPdf(
-      await createPdfFile(),
-      [textWatermark({ displayScale: 0 })],
-    ),
+    createWatermarkedPdf(await createPdfFile(), [
+      textWatermark({ displayScale: 0 }),
+    ]),
     /preview scale/,
   );
 });

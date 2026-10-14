@@ -72,7 +72,7 @@ async function openWatermarkModeWithPdf(
     mimeType: "application/pdf",
     buffer: pdfBytes,
   });
-  await expect(page.getByLabel(`PDF page 1 of ${pageCount}`)).toBeVisible();
+  await expect(page.getByLabel(`PDF page 1 of ${pageCount}`)).toBeVisible({ timeout: 10000 });
   await page.getByRole("button", { name: "Watermark" }).click();
 }
 

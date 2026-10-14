@@ -222,15 +222,22 @@ The project includes Playwright end-to-end tests and unit tests for PDF export f
 
 The Playwright tests verify browser-level behaviour, while the PDF export unit tests validate selected export scenarios.
 
-The reported successful test run completed **112 Playwright tests and 11 PDF export unit tests**. The reported coverage was:
+The latest reported successful test run completed **121 Playwright tests and 15 PDF export unit tests**, with all 136 reported tests passing.
 
-- Statements: 92.94%
-- Branches: 86.40%
+The reported code coverage was:
+
+- Statements: 93.87%
+- Branches: 90.47%
 - Functions: 96.58%
-- Lines: 93.00%
+- Lines: 93.94%
 
 These figures apply to the configured coverage scope and do not necessarily represent every file in the repository.
 
+To run the complete test and coverage suite, use:
+
+```bash
+npm run test:e2e:coverage
+```
 ## 14. Summary
 
 DocuCraft's data flow begins with PDF selection and validation, continues through PDF.js rendering and interactive editing, and ends with PDF generation and browser download.
