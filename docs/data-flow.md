@@ -19,29 +19,38 @@ The main workflow is:
 7. The export utility embeds supported editing elements into the PDF.
 8. The browser downloads the generated PDF.
 
+
 ## 3. Data-Flow Diagram
 
 ```mermaid
 flowchart TD
-    A[User selects or drops PDF] --> B[PDF Uploader]
-    B --> C{File valid and readable?}
-    C -- No --> D[Display error message]
-    C -- Yes --> E[Read PDF file]
-    E --> F[PDF Viewer using PDF.js]
-    F --> G[Render PDF pages]
-    G --> H[Editor interface]
-    H --> I[Add or edit watermarks]
-    H --> J[Add or edit signatures]
-    I --> K[Editor state]
+    A["User selects or drops PDF"] --> B["PDF Uploader"]
+    B --> C{"File valid and readable?"}
+
+    C -->|No| D["Display error message"]
+    C -->|Yes| E["Read PDF file"]
+
+    E --> F["PDF.js loads PDF"]
+    F --> G["Render PDF pages"]
+    G --> H["Editor interface"]
+
+    H --> I["Add or edit watermarks"]
+    H --> J["Add or edit signatures"]
+
+    I --> K["React editor state"]
     J --> K
-    K --> L[User exports PDF]
-    L --> M[PDF Export Utility]
-    M --> N{Export successful?}
-    N -- No --> O[Display export error]
-    N -- Yes --> P[Download final PDF]
+
+    K <--> L["Browser storage"]
+    K --> M["User exports PDF"]
+
+    M --> N["PDF Export Utility"]
+    N --> O["pdf-lib processes source PDF"]
+    O --> P{"Export successful?"}
+
+    P -->|No| Q["Display export error"]
+    P -->|Yes| R["Download final PDF"]
 ```
 
-The diagram represents the main workflow from PDF selection to the final document download.
 
 ## 4. PDF Upload and Validation
 
@@ -201,15 +210,15 @@ A saved editor state is not the same as a saved, exported PDF.
 
 The project includes Playwright end-to-end tests and unit tests for PDF export functionality.
 
-| Test file                    | Main responsibility                      |
-| ---------------------------- | ---------------------------------------- |
-| `tests/pdf-upload.spec.ts`   | PDF upload and file-handling scenarios   |
-| `tests/watermark.spec.ts`    | Watermark creation, editing, and export  |
-| `tests/signature.spec.ts`    | Signature creation, editing, and export  |
-| `tests/edge-cases.spec.ts`   | Boundary conditions and unusual inputs   |
+| Test file | Main responsibility |
+|---|---|
+| `tests/pdf-upload.spec.ts` | PDF upload and file-handling scenarios |
+| `tests/watermark.spec.ts` | Watermark creation, editing, and export |
+| `tests/signature.spec.ts` | Signature creation, editing, and export |
+| `tests/edge-cases.spec.ts` | Boundary conditions and unusual inputs |
 | `tests/editor-bonus.spec.ts` | Additional editor features and workflows |
-| `tests/pdfExport.unit.mjs`   | Unit tests for PDF export logic          |
-| `tests/homepage.spec.ts`     | Initial application interface            |
+| `tests/pdfExport.unit.mjs` | Unit tests for PDF export logic |
+| `tests/homepage.spec.ts` | Initial application interface |
 
 The Playwright tests verify browser-level behaviour, while the PDF export unit tests validate selected export scenarios.
 

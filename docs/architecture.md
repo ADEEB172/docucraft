@@ -14,6 +14,43 @@ DocuCraft uses a component-based architecture built with Next.js, React, and Typ
 
 This structure separates the main application interface, PDF functionality, signature functionality, and export logic.
 
+## Application Architecture Diagram
+
+The following diagram illustrates the main components of DocuCraft and how they interact during PDF editing and export.
+
+```mermaid
+flowchart TD
+    U["User"] --> APP["Next.js Application"]
+
+    APP --> PAGE["src/app/page.tsx"]
+    APP --> LAYOUT["src/app/layout.tsx"]
+
+    PAGE --> UPLOAD["PdfUploader.tsx"]
+    PAGE --> VIEWER["PdfViewer.tsx"]
+    PAGE --> SIGN["SignaturePad.tsx"]
+
+    UPLOAD --> VALIDATE["PDF Validation and Loading"]
+    VALIDATE --> PDFJS["pdfjs-dist (PDF.js)"]
+    PDFJS --> VIEWER
+
+    VIEWER --> STATE["React Editor State"]
+    SIGN --> STATE
+
+    STATE --> WATERMARK["Text and Image Watermarks"]
+    STATE --> SIGNATURE["Signature Elements"]
+
+    WATERMARK --> EXPORT["src/lib/pdfExport.ts"]
+    SIGNATURE --> EXPORT
+
+    EXPORT --> PDFLIB["pdf-lib"]
+    PDFLIB --> DOWNLOAD["Download Edited PDF"]
+
+    STATE <--> STORAGE["Browser Storage"]
+
+    CSS["CSS Modules and Global Styles"] -.-> APP
+```
+
+
 ## 2. State Management
 
 DocuCraft uses React state to manage interactive editor data and UI changes.
