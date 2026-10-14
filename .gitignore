@@ -12,9 +12,13 @@
 
 # testing
 /coverage
+/.nyc_output/
+/test-results/
+/playwright-report/
 
 # next.js
 /.next/
+/.next-coverage/
 /out/
 
 # production

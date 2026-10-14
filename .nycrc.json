@@ -1,0 +1,14 @@
+{
+  "all": true,
+  "include": [
+    "src/app/page.tsx",
+    "src/components/pdf/PdfViewer.tsx",
+    "src/components/pdf/PdfUploader.tsx",
+    "src/components/signature/SignaturePad.tsx",
+    "src/lib/pdfExport.ts"
+  ],
+  "extension": [".ts", ".tsx"],
+  "reporter": ["html", "text-summary"],
+  "report-dir": "coverage/e2e",
+  "temp-dir": ".nyc_output"
+}

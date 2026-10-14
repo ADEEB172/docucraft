@@ -1,0 +1,171 @@
+.signaturePad {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.instructions,
+.message {
+  margin: 0;
+  color: #73808c;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.uploadSection {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.uploadButton {
+  position: relative;
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #286b63;
+  border-radius: 7px;
+  background: #fff;
+  padding: 0 10px;
+  color: #286b63;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+}
+
+.uploadButton:hover {
+  background: #f0f7f5;
+}
+
+.uploadButton:focus-within {
+  outline: 3px solid #7bb6aa;
+  outline-offset: 2px;
+}
+
+.uploadInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.uploadPreview {
+  display: grid;
+  min-height: 72px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid #dce2e5;
+  border-radius: 7px;
+  background-color: #fff;
+  background-image:
+    linear-gradient(45deg, #f1f3f4 25%, transparent 25%),
+    linear-gradient(-45deg, #f1f3f4 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #f1f3f4 75%),
+    linear-gradient(-45deg, transparent 75%, #f1f3f4 75%);
+  background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+  background-size: 12px 12px;
+  padding: 8px;
+}
+
+.uploadPreview img {
+  display: block;
+  max-width: 100%;
+  max-height: 100px;
+  object-fit: contain;
+}
+
+.separator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #929da6;
+  font-size: 10px;
+  text-align: center;
+}
+
+.separator::before,
+.separator::after {
+  height: 1px;
+  flex: 1;
+  background: #e8ecef;
+  content: "";
+}
+
+.canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid #dce2e5;
+  border-radius: 7px;
+  background: #fff;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.primaryButton,
+.secondaryButton {
+  min-height: 36px;
+  flex: 1;
+  border: 1px solid #286b63;
+  border-radius: 7px;
+  padding: 0 9px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primaryButton {
+  background: #286b63;
+  color: #fff;
+}
+
+.secondaryButton {
+  background: #fff;
+  color: #286b63;
+}
+
+.primaryButton:disabled {
+  border-color: #d9e0e3;
+  background: #edf0f2;
+  color: #939da5;
+  cursor: not-allowed;
+}
+
+.primaryButton:focus-visible,
+.secondaryButton:focus-visible {
+  outline: 3px solid #7bb6aa;
+  outline-offset: 2px;
+}
+
+.message {
+  min-height: 17px;
+  color: #8a6b3f;
+}
+
+:global([data-theme="dark"]) .instructions,
+:global([data-theme="dark"]) .separator,
+:global([data-theme="dark"]) .message {
+  color: #b2bec6;
+}
+
+:global([data-theme="dark"]) .uploadButton,
+:global([data-theme="dark"]) .secondaryButton {
+  border-color: #4b8f82;
+  background: #202b30;
+  color: #a8ded2;
+}
+
+:global([data-theme="dark"]) .canvas {
+  border-color: #35444c;
+}

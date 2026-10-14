@@ -6,19 +6,27 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:e2e": "playwright test",
+    "test:unit": "node scripts/run-pdf-export-unit-tests.mjs",
+    "test:e2e:coverage": "node scripts/run-e2e-coverage.mjs && nyc report"
   },
   "dependencies": {
     "next": "16.4.0",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^6.4.299",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "babel-plugin-istanbul": "^7.0.1",
     "eslint": "^9",
     "eslint-config-next": "16.4.0",
+    "nyc": "^18.0.0",
     "typescript": "^5"
   }
 }

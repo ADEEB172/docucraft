@@ -1,0 +1,664 @@
+.uploadCard {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: min(100%, 430px);
+  align-items: center;
+  flex-direction: column;
+  border: 1px solid #e8ecef;
+  border-radius: 14px;
+  background: rgb(255 255 255 / 96%);
+  padding: 38px 34px 30px;
+  text-align: center;
+  box-shadow: 0 12px 34px rgb(33 51 61 / 5%);
+}
+
+.uploadIllustration {
+  display: grid;
+  width: 60px;
+  height: 60px;
+  place-items: center;
+  border: 1px solid #dcebe7;
+  border-radius: 16px;
+  background: #f0f7f5;
+  color: #286b63;
+}
+
+.uploadIllustration svg {
+  width: 37px;
+  height: 37px;
+}
+
+.uploadCard h2 {
+  margin: 22px 0 8px;
+  color: #17212b;
+  font-size: 19px;
+  font-weight: 650;
+  letter-spacing: -0.4px;
+}
+
+.uploadCard > p {
+  max-width: 310px;
+  margin: 0;
+  color: #73808c;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.fileButton {
+  position: relative;
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 22px;
+  border: 1px solid #286b63;
+  border-radius: 7px;
+  background: #286b63;
+  padding: 0 14px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.fileButton:hover {
+  border-color: #205950;
+  background: #205950;
+}
+
+.fileButton:focus-within {
+  outline: 3px solid #2a4943;
+  outline-offset: 3px;
+}
+
+.fileButton svg {
+  width: 18px;
+  height: 18px;
+}
+
+.fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.fileHint {
+  margin: 12px 0 0;
+  color: #929da6;
+  font-size: 11px;
+}
+
+.errorMessage {
+  max-width: 330px;
+  margin: 12px 0 0;
+  color: #a33131;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.replaceControl {
+  position: absolute;
+  z-index: 2;
+  top: 14px;
+  right: 22px;
+  left: 22px;
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.replaceControl .fileButton {
+  min-height: 34px;
+  flex: 0 0 auto;
+  margin-top: 0;
+  background: #fff;
+  color: #286b63;
+}
+
+.replaceControl .fileButton:hover {
+  background: #f0f7f5;
+}
+
+.selectedFileName {
+  overflow: hidden;
+  color: #64717b;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.replaceControl .errorMessage {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  max-width: min(100%, 380px);
+  margin-top: 7px;
+  border: 1px solid #f0d2d2;
+  border-radius: 6px;
+  background: #fff8f8;
+  padding: 7px 10px;
+}
+
+.viewer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: 50px 16px 68px;
+}
+
+.pageViewport {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  flex: 1;
+  place-items: center;
+  overflow: auto;
+}
+
+.pageFigure {
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+  align-items: center;
+  flex-direction: column;
+  margin: auto;
+  transform-origin: center center;
+}
+
+.pageSurface {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  line-height: 0;
+}
+
+.snapGrid,
+.alignmentGuides {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  pointer-events: none;
+}
+
+.snapGrid {
+  background-image:
+    linear-gradient(to right, rgb(40 107 99 / 13%) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(40 107 99 / 13%) 1px, transparent 1px);
+  background-size: 5% 5%;
+}
+
+.alignmentGuides span {
+  position: absolute;
+  display: block;
+  background: #d94841;
+  opacity: 0.75;
+}
+
+.alignmentGuides span:first-child {
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+}
+
+.alignmentGuides span:last-child {
+  top: 50%;
+  right: 0;
+  left: 0;
+  height: 1px;
+}
+
+.pdfCanvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid #e1e5e8;
+  background: #fff;
+  box-shadow: 0 8px 26px rgb(35 47 56 / 13%);
+}
+
+.pdfCanvas[hidden] {
+  display: none;
+}
+
+.watermarkLayer {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.textWatermark {
+  position: absolute;
+  width: max-content;
+  max-width: none;
+  box-sizing: border-box;
+  transform: translate(-50%, -50%);
+  border: 1px dashed transparent;
+  border-radius: 3px;
+  background: transparent;
+  padding: 3px 6px;
+  font-family: inherit;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-align: center;
+  cursor: grab;
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.imageWatermarkFrame {
+  position: absolute;
+  display: block;
+  box-sizing: border-box;
+  transform: translate(-50%, -50%);
+  border: 1px dashed transparent;
+  border-radius: 3px;
+  cursor: grab;
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+}
+
+.imageWatermark {
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+.selectedWatermark {
+  border-color: rgb(40 107 99 / 48%);
+  outline: 1px solid rgb(40 107 99 / 35%);
+}
+
+.signatureFrame {
+  position: absolute;
+  display: block;
+  transform: translate(-50%, -50%);
+  border: 1px dashed transparent;
+  border-radius: 3px;
+  cursor: grab;
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+}
+
+.signatureTextFrame {
+  position: absolute;
+  display: block;
+  width: max-content;
+  max-width: none;
+  box-sizing: border-box;
+  border: 1px dashed transparent;
+  border-radius: 3px;
+  padding: 3px 6px;
+  font-family: inherit;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: grab;
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+}
+
+.selectedSignature {
+  border-color: rgb(40 107 99 / 65%);
+  outline: 1px solid rgb(40 107 99 / 35%);
+}
+
+.signatureImage {
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+.signatureFrame:active {
+  cursor: grabbing;
+}
+
+.signatureFrame:focus-visible {
+  outline: 2px solid #286b63;
+  outline-offset: 2px;
+}
+
+.signatureTextFrame:focus-visible {
+  outline: 2px solid #286b63;
+  outline-offset: 2px;
+}
+
+.signatureTextFrame:active {
+  cursor: grabbing;
+}
+
+.signatureResizeHandle {
+  position: absolute;
+  right: -8px;
+  bottom: -8px;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #fff;
+  border-radius: 4px;
+  background: #286b63;
+  box-shadow: 0 1px 4px rgb(23 33 43 / 35%);
+  cursor: nwse-resize;
+  touch-action: none;
+}
+
+.signatureResizeHandle:focus-visible {
+  outline: 2px solid #17212b;
+  outline-offset: 2px;
+}
+
+.signatureRotationHandle {
+  position: absolute;
+  top: -25px;
+  left: 50%;
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #286b63;
+  box-shadow: 0 1px 4px rgb(23 33 43 / 35%);
+  color: #fff;
+  font: inherit;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.signatureRotationHandle:focus-visible {
+  outline: 2px solid #17212b;
+  outline-offset: 2px;
+}
+
+.textWatermark:focus-visible {
+  outline: 2px solid #286b63;
+  outline-offset: 2px;
+}
+
+.imageWatermarkFrame:focus-visible {
+  outline: 2px solid #286b63;
+  outline-offset: 2px;
+}
+
+.textWatermark:active {
+  cursor: grabbing;
+}
+
+.imageWatermarkFrame:active {
+  cursor: grabbing;
+}
+
+.resizeHandle {
+  position: absolute;
+  right: -8px;
+  bottom: -8px;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #fff;
+  border-radius: 4px;
+  background: #286b63;
+  box-shadow: 0 1px 4px rgb(23 33 43 / 35%);
+  cursor: nwse-resize;
+  touch-action: none;
+}
+
+.resizeHandle:focus-visible {
+  outline: 2px solid #17212b;
+  outline-offset: 2px;
+}
+
+.rotationHandle {
+  position: absolute;
+  top: -25px;
+  left: 50%;
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #286b63;
+  box-shadow: 0 1px 4px rgb(23 33 43 / 35%);
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  line-height: 1;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.rotationHandle:active {
+  cursor: grabbing;
+}
+
+.rotationHandle:focus-visible {
+  outline: 2px solid #17212b;
+  outline-offset: 2px;
+}
+
+.viewerMessage,
+.viewerError {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: auto;
+  border: 1px solid #e8ecef;
+  border-radius: 9px;
+  background: #fff;
+  padding: 14px 17px;
+  color: #64717b;
+  font-size: 13px;
+  line-height: 1.5;
+  box-shadow: 0 4px 15px rgb(33 51 61 / 5%);
+}
+
+.viewerError {
+  max-width: min(100%, 440px);
+  color: #a33131;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  border: 2px solid #dcebe7;
+  border-top-color: #286b63;
+  border-radius: 50%;
+  animation: spin 800ms linear infinite;
+}
+
+.renderingMessage {
+  margin-top: 9px;
+  color: #64717b;
+  font-size: 11px;
+}
+
+.pageNavigation {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  transform: translateX(-50%);
+  border: 1px solid #e5e9ec;
+  border-radius: 8px;
+  background: #fff;
+  padding: 4px 10px;
+  color: #9aa4ad;
+  font-size: 12px;
+  white-space: nowrap;
+  box-shadow: 0 3px 10px rgb(33 51 61 / 4%);
+}
+
+.pageNavigation button {
+  display: inline-flex;
+  min-width: 76px;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  padding: 0 12px;
+  color: #54616b;
+  font: inherit;
+  cursor: pointer;
+}
+
+.pageNavigation button:hover:not(:disabled) {
+  background: #f0f3f4;
+}
+
+.pageNavigation button:disabled {
+  color: #aeb7bd;
+  cursor: not-allowed;
+}
+
+.pageNavigation button:focus-visible {
+  outline: 3px solid #7bb6aa;
+  outline-offset: 2px;
+}
+
+:global([data-theme="dark"]) .pageNavigation,
+:global([data-theme="dark"]) .viewerMessage,
+:global([data-theme="dark"]) .viewerError {
+  border-color: #35444c;
+  background: #1b252a;
+  color: #dce6ea;
+}
+
+:global([data-theme="dark"]) .pageNavigation button {
+  color: #dce6ea;
+}
+
+:global([data-theme="dark"]) .pageNavigation button:hover:not(:disabled) {
+  background: #2a383e;
+}
+
+:global([data-theme="dark"]) .fileButton {
+  border-color: #4b8f82;
+  background: #286b63;
+  color: #fff;
+}
+
+:global([data-theme="dark"]) .replaceControl .fileButton {
+  background: #202b30;
+  color: #a8ded2;
+}
+
+:global([data-theme="dark"]) .uploadIllustration {
+  border-color: #385b56;
+  background: #263a3b;
+  color: #a8ded2;
+}
+
+:global([data-theme="dark"]) .replaceControl .errorMessage {
+  border-color: #663d3d;
+  background: #352323;
+}
+
+.pageNavigation button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.pageCounter {
+  min-width: 96px;
+  padding: 0 4px;
+  color: #73808c;
+  text-align: center;
+}
+
+.pageCounter strong {
+  color: #46545f;
+  font-weight: 600;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 600px) {
+  .uploadCard {
+    padding: 28px 20px 24px;
+  }
+
+  .uploadCard h2 {
+    font-size: 17px;
+  }
+
+  .uploadCard > p {
+    font-size: 12px;
+  }
+
+  .replaceControl {
+    top: 10px;
+    right: 14px;
+    left: 14px;
+    gap: 8px;
+  }
+
+  .selectedFileName {
+    font-size: 11px;
+  }
+
+  .viewer {
+    padding: 52px 8px 66px;
+  }
+
+  .pageNavigation {
+    bottom: 14px;
+    gap: 3px;
+    padding-right: 4px;
+    padding-left: 4px;
+  }
+
+  .pageNavigation button {
+    min-width: 42px;
+    padding-right: 5px;
+    padding-left: 5px;
+  }
+
+  .pageCounter {
+    min-width: 62px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fileButton {
+    transition: none;
+  }
+
+  .spinner {
+    animation-duration: 1600ms;
+  }
+}
