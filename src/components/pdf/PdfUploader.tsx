@@ -117,7 +117,8 @@ export default function PdfUploader({
           <h2>Bring your document to life</h2>
           <p>
             Choose or drop a PDF to preview its pages and add watermarks or
-            signatures.
+            signatures. The PDF itself is not saved, so choose the same PDF
+            again after refreshing to restore saved editor changes.
           </p>
         </>
       )}

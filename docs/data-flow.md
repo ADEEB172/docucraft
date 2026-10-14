@@ -14,97 +14,83 @@ The main workflow is:
 2. The application validates and reads the selected file.
 3. PDF.js loads and renders the PDF pages for preview.
 4. The user adds or edits watermarks and signatures.
-5. The editor maintains the data and properties required for editing.
-6. The user requests PDF export.
-7. The export utility embeds supported editing elements into the PDF.
-8. The browser downloads the generated PDF.
-
+5. React state maintains the current editing information.
+6. The application saves supported editor data using browser storage.
+7. The user requests PDF export.
+8. The export utility generates the edited PDF.
+9. The browser downloads the final document.
 
 ## 3. Data-Flow Diagram
 
 ```mermaid
 flowchart TD
-    A["User selects or drops PDF"] --> B["PDF Uploader"]
-    B --> C{"File valid and readable?"}
+    A["User selects PDF"] --> B["PDF Uploader"]
+    B --> C{"PDF valid?"}
 
-    C -->|No| D["Display error message"]
-    C -->|Yes| E["Read PDF file"]
+    C -->|No| D["Display error"]
+    C -->|Yes| E["Load PDF"]
 
-    E --> F["PDF.js loads PDF"]
+    E --> F["PDF.js"]
     F --> G["Render PDF pages"]
-    G --> H["Editor interface"]
+    G --> H["Editor Interface"]
 
-    H --> I["Add or edit watermarks"]
-    H --> J["Add or edit signatures"]
+    H --> I["Watermarks"]
+    H --> J["Signatures"]
 
-    I --> K["React editor state"]
+    I --> K["React Editor State"]
     J --> K
 
-    K <--> L["Browser storage"]
-    K --> M["User exports PDF"]
+    K --> L["editorStorage.ts"]
+    L --> M["localStorage"]
+    L --> N["IndexedDB Fallback"]
 
-    M --> N["PDF Export Utility"]
-    N --> O["pdf-lib processes source PDF"]
-    O --> P{"Export successful?"}
+    K --> O["PDF Export Utility"]
+    O --> P["pdf-lib"]
+    P --> Q{"Export successful?"}
 
-    P -->|No| Q["Display export error"]
-    P -->|Yes| R["Download final PDF"]
+    Q -->|No| R["Display export error"]
+    Q -->|Yes| S["Download final PDF"]
 ```
-
 
 ## 4. PDF Upload and Validation
 
 **Relevant file:** `src/components/pdf/PdfUploader.tsx`
 
-### File Selection
-
 The user selects a PDF through the upload interface or drops a file into the supported drop area.
 
-### Validation
+The application checks whether the selected file can be processed. Invalid file types, empty files, and unreadable PDFs are handled through the application's error-handling workflow.
 
-The application checks whether the selected file can be accepted and processed. Invalid or unreadable documents are handled through the application's error-handling workflow.
-
-The automated tests cover file-handling scenarios such as invalid file types, empty files, and problematic PDF inputs.
-
-### Reading the File
-
-After the file passes the relevant checks, its data is passed to the PDF loading workflow. The original PDF serves as the source document for preview and export.
+After validation, the PDF data is passed to the loading workflow. The original PDF is used for preview and export.
 
 ## 5. PDF Rendering
 
 **Relevant file:** `src/components/pdf/PdfViewer.tsx`
 
-DocuCraft uses PDF.js through the `pdfjs-dist` library to load and render PDF pages in the browser.
+DocuCraft uses PDF.js through `pdfjs-dist` to load and render PDF pages in the browser.
 
-The viewer renders PDF pages using canvas elements, allowing users to preview the document while editing.
+PDF pages are displayed using canvas elements.
 
-The rendering and export responsibilities are separate:
+The responsibilities are separated:
 
 - **PDF.js:** Loads and renders PDF pages for preview.
-- **React editor:** Displays editing controls and interactive watermark and signature elements.
-- **pdf-lib:** Processes the PDF during export.
+- **React editor:** Manages interactive editing controls and elements.
+- **pdf-lib:** Processes the document during export.
 
-The preview canvas is not itself the final exported PDF. The export utility works with the source PDF and the relevant editing data to generate the final document.
+The preview canvas is not itself the final exported PDF. The export utility processes the source PDF and supported editing data.
 
 ## 6. Watermark Data Flow
 
 DocuCraft supports text and image watermarks.
 
-Users can add multiple watermarks and use the available editing controls to modify their content, appearance, and placement.
+Users can add multiple watermarks and modify their supported properties, including:
 
-Watermark properties may include:
-
-- Watermark type: text or image.
-- Text content or image data.
+- Watermark type and content.
 - Position on the PDF page.
 - Width and height.
-- Rotation.
-- Opacity.
+- Rotation and opacity.
 - Text color and other supported appearance settings.
 
-The editor maintains watermark information for preview and editing. When a watermark is modified, the updated properties are used by the viewer and the export workflow.
-
-During export, the PDF export utility uses the applicable watermark data to place the watermark on its assigned PDF page.
+The editor maintains watermark information for preview and editing. Changes update the editor state and are used by the export workflow.
 
 **Relevant files:**
 
@@ -114,9 +100,9 @@ During export, the PDF export utility uses the applicable watermark data to plac
 
 ## 7. E-Sign Data Flow
 
-DocuCraft provides an E-Sign mode for adding visual signatures to PDF pages.
+DocuCraft provides a visual E-Sign mode for adding signatures to PDF pages.
 
-The supported signature input methods include:
+Supported signature input methods include:
 
 1. Text signatures.
 2. Drawn signatures.
@@ -124,35 +110,19 @@ The supported signature input methods include:
 
 **Relevant file:** `src/components/signature/SignaturePad.tsx`
 
-### Text Signature
+Drawn signatures are created using a canvas-based interface. Uploaded signature images are validated and prepared before use.
 
-The user enters signature text, which is used by the editor to create a visual signature element.
-
-### Drawn Signature
-
-The user draws a signature using the canvas-based signature interface. The resulting signature image can be used in the editor.
-
-### Uploaded Signature Image
-
-The user can upload a supported PNG or JPEG signature image. The application validates and processes the image before it is used as a signature element.
-
-### Editing and Export
-
-The user can position and resize signature elements using the available editor controls. Signatures can be placed on different PDF pages.
-
-During export, the PDF export utility embeds the supported signature elements into their corresponding pages.
+Users can position and resize supported signature elements. During export, the PDF export utility embeds the signatures into their corresponding pages.
 
 This is a visual signature feature. It does not, by itself, provide cryptographic digital-signature verification or certificate-based signing.
 
-## 8. Editing State and Element Transformations
+## 8. Editing State and Transformations
 
-The editor coordinates the PDF document, watermark elements, signature elements, and their editing properties.
+The editor coordinates the source PDF, watermarks, signatures, and their editing properties.
 
-Depending on the selected element and the available controls, properties can include position, dimensions, rotation, content, and appearance.
+Supported operations can include moving, resizing, rotating, changing, and deleting elements.
 
-Operations such as moving, resizing, rotating, modifying, and deleting elements update the editing data used by the preview and export workflows.
-
-The export process uses the editing data rather than simply exporting a screenshot of the preview. This allows the generated PDF to contain actual watermark and signature elements.
+React state maintains the editing information used by the preview and export workflows. The exported document is generated from the source PDF and editing data rather than simply exporting a screenshot of the preview.
 
 The editor also includes undo/redo and browser-based editor-state restoration features.
 
@@ -160,88 +130,99 @@ The editor also includes undo/redo and browser-based editor-state restoration fe
 
 **Relevant file:** `src/lib/pdfExport.ts`
 
-The editor preview and the PDF document can use different coordinate systems. Therefore, element positions in the preview may need to be converted before they are drawn into the PDF.
+The editor preview and the PDF document can use different coordinate systems. Element positions may therefore need to be converted before being drawn into the PDF.
 
 The export implementation handles relevant positioning and transformation details, including page dimensions, element placement, dimensions, rotation, and page rotation where supported.
 
-DocuCraft uses `pdf-lib` to load the source PDF and embed supported text and image elements.
-
-The export workflow aims to preserve the final editing positions and page assignments in the generated document. Automated tests cover selected PDF export scenarios, including different page dimensions, rotations, watermarks, and signatures.
+The `pdf-lib` library loads the source PDF and embeds supported text and image elements.
 
 ## 10. Download Flow
 
 When the user selects **Export PDF**, the workflow is:
 
 1. The application collects the source PDF and relevant editing data.
-2. The export utility processes the document and supported editing elements.
-3. The application handles any export errors.
-4. If export succeeds, the generated PDF is offered as a browser download.
+2. The export utility processes the PDF and supported editing elements.
+3. Export errors are handled if the operation fails.
+4. If export succeeds, the browser downloads the generated PDF.
 
 The downloaded PDF is the final output of the editing workflow.
 
 ## 11. Error Handling
 
-DocuCraft includes error handling for common document, file-processing, and export problems.
+DocuCraft handles common document, file-processing, and export problems.
 
-Examples covered by the implementation or automated tests include:
+Examples include:
 
 - Invalid or malformed PDF files.
-- Unsupported file types.
-- Empty files.
+- Unsupported file types and empty files.
 - PDF loading or rendering failures.
 - Invalid or unreadable image inputs.
 - Signature image preparation failures.
 - Text that cannot be exported using the configured PDF font.
-- Errors while preparing the final PDF.
+- Errors while generating the final PDF.
+- Browser-storage failures.
 
-The application handles failures so that unsuccessful operations are not treated as successful exports. Appropriate feedback helps users understand when an operation cannot be completed.
+The application should not treat a failed operation as a successful export or save. Appropriate feedback helps users understand when an operation cannot be completed.
 
 ## 12. Browser Storage and Restoration
 
-DocuCraft includes browser-based restoration of saved editor state.
+**Relevant file:** `src/lib/editorStorage.ts`
 
-Automated tests cover restoring saved page-specific edits when the same PDF is uploaded again, handling malformed saved data, and refreshing during editing.
+DocuCraft saves supported editor data in browser storage so that editing changes can be restored.
 
-Browser-based editor-state restoration is different from permanent server-side storage. The application can restore supported editing information from browser storage, while the generated PDF is downloaded to the user's local system.
+The storage workflow is:
 
-A saved editor state is not the same as a saved, exported PDF.
+1. React state contains the current editor information.
+2. The storage module attempts to save the supported data.
+3. `localStorage` is used where possible.
+4. If the primary storage write fails, the application can use IndexedDB as a fallback.
+5. When the user refreshes and uploads the same original PDF again, the application attempts to match the saved editor state and restore supported changes.
+
+Saved information can include supported page-specific edits, settings, watermarks, and signatures.
+
+The application validates saved data before applying it. If both storage mechanisms fail, it reports the storage problem rather than claiming that the data was saved successfully.
+
+**Important limitations:**
+
+- The original PDF file itself is not saved for automatic reopening.
+- The user may need to upload the same PDF again after refreshing.
+- Saved editor data can be lost if browser storage is cleared.
+- Browser storage does not synchronize data across different browsers or devices.
+- Browser storage is not a substitute for server-side storage or cloud backup.
+
+A saved editor state is different from a downloaded, exported PDF.
 
 ## 13. Automated Test Coverage
 
-The project includes Playwright end-to-end tests and unit tests for PDF export functionality.
+The project uses Playwright for browser-based end-to-end testing and separate unit tests for PDF export functionality.
 
-| Test file | Main responsibility |
-|---|---|
-| `tests/pdf-upload.spec.ts` | PDF upload and file-handling scenarios |
-| `tests/watermark.spec.ts` | Watermark creation, editing, and export |
-| `tests/signature.spec.ts` | Signature creation, editing, and export |
-| `tests/edge-cases.spec.ts` | Boundary conditions and unusual inputs |
-| `tests/editor-bonus.spec.ts` | Additional editor features and workflows |
-| `tests/pdfExport.unit.mjs` | Unit tests for PDF export logic |
-| `tests/homepage.spec.ts` | Initial application interface |
+The tests cover PDF upload, watermark editing, signature workflows, export behavior, storage restoration, and error handling.
 
-The Playwright tests verify browser-level behaviour, while the PDF export unit tests validate selected export scenarios.
+The latest reported test run completed:
 
-The latest reported successful test run completed **121 Playwright tests and 15 PDF export unit tests**, with all 136 reported tests passing.
+- **123 Playwright tests passed.**
+- **15 PDF export unit tests passed.**
+- **Total: 138 tests passed.**
 
 The reported code coverage was:
 
-- Statements: 93.87%
-- Branches: 90.47%
-- Functions: 96.58%
-- Lines: 93.94%
+- Statements: 93.85%
+- Branches: 90.37%
+- Functions: 96.61%
+- Lines: 93.92%
 
 These figures apply to the configured coverage scope and do not necessarily represent every file in the repository.
 
-To run the complete test and coverage suite, use:
+Run the complete test and coverage workflow using:
 
 ```bash
 npm run test:e2e:coverage
 ```
+
 ## 14. Summary
 
-DocuCraft's data flow begins with PDF selection and validation, continues through PDF.js rendering and interactive editing, and ends with PDF generation and browser download.
+DocuCraft's data flow starts with PDF selection and validation, continues through PDF.js rendering and interactive editing, and ends with PDF generation and browser download.
 
-React manages the interactive editor interface, PDF.js provides the document preview, and `pdf-lib` is used to embed supported watermarks and signatures into the exported PDF.
+React manages the editor interface, `editorStorage.ts` handles supported browser-based persistence, PDF.js provides the document preview, and `pdf-lib` generates the exported PDF with supported watermarks and signatures.
 
-Separating upload, rendering, editing, export, and testing responsibilities makes the workflow easier to maintain, test, and explain.
+Separating upload, rendering, editing, storage, export, and testing responsibilities makes the application easier to maintain, test, and explain.

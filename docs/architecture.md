@@ -1,139 +1,168 @@
 # DocuCraft — Application Architecture
 
-## 1. Component Structure
+## 1. Overview
 
-DocuCraft uses a component-based architecture built with Next.js, React, and TypeScript. The application is divided into smaller components to keep the code organized, reusable, and easier to maintain.
+DocuCraft is a browser-based PDF Watermarking and E-Sign Editor built with Next.js, React, and TypeScript.
 
-- **`src/app/page.tsx`** – Main editor page that brings together the application's interface and editing features.
-- **`src/app/layout.tsx`** – Defines the root layout of the Next.js application.
-- **`src/components/pdf/PdfUploader.tsx`** – Handles PDF file selection and upload-related functionality.
-- **`src/components/pdf/PdfViewer.tsx`** – Displays PDF pages and supports the document editing interface.
-- **`src/components/signature/SignaturePad.tsx`** – Provides a canvas for drawing a signature and controls for clearing or using it.
-- **`src/lib/pdfExport.ts`** – Contains the PDF export functionality.
-- **CSS Modules and global styles** – Manage component-specific styling and the overall appearance of the application.
+The application follows a component-based architecture. The main editor page coordinates the user interface, PDF components handle document upload and viewing, the signature component manages signature input, and separate library modules handle PDF export and editor-state persistence.
 
-This structure separates the main application interface, PDF functionality, signature functionality, and export logic.
+PDF processing and browser-based editor recovery take place on the client side. The application does not require a backend server for its described editing and export workflow.
 
-## Application Architecture Diagram
+## 2. Component Structure
 
-The following diagram illustrates the main components of DocuCraft and how they interact during PDF editing and export.
+The main source files and their responsibilities are:
+
+- **`src/app/page.tsx`** — Main editor page. Coordinates editor state, editing modes, PDF loading, state restoration, autosave, and export actions.
+- **`src/app/layout.tsx`** — Defines the root layout of the Next.js application.
+- **`src/components/pdf/PdfUploader.tsx`** — Handles PDF selection, drag-and-drop input, and upload-related validation.
+- **`src/components/pdf/PdfViewer.tsx`** — Loads and displays PDF pages and coordinates document loading with the parent editor.
+- **`src/components/signature/SignaturePad.tsx`** — Provides the interface for drawing, clearing, and using a signature, as well as supported signature image input.
+- **`src/lib/pdfExport.ts`** — Contains PDF export logic using `pdf-lib`.
+- **`src/lib/editorStorage.ts`** — Provides browser storage helpers for saving and restoring supported editor-state data, including fallback handling between browser storage methods.
+- **CSS Modules and global styles** — Define component-specific styles and the overall application appearance.
+
+This structure separates the interface, PDF rendering, signature input, export processing, and editor-state persistence.
+
+## 3. Application Architecture Diagram
+
+The following diagram shows the main relationships between the editor components, PDF libraries, browser storage, and export functionality.
 
 ```mermaid
 flowchart TD
-    U["User"] --> APP["Next.js Application"]
-
-    APP --> PAGE["src/app/page.tsx"]
+    USER["User"] --> APP["Next.js Application"]
     APP --> LAYOUT["src/app/layout.tsx"]
+    APP --> PAGE["src/app/page.tsx"]
 
-    PAGE --> UPLOAD["PdfUploader.tsx"]
+    PAGE --> UPLOADER["PdfUploader.tsx"]
     PAGE --> VIEWER["PdfViewer.tsx"]
     PAGE --> SIGN["SignaturePad.tsx"]
 
-    UPLOAD --> VALIDATE["PDF Validation and Loading"]
-    VALIDATE --> PDFJS["pdfjs-dist (PDF.js)"]
+    UPLOADER --> VALIDATE["PDF File Validation"]
+    VALIDATE --> PDFJS["PDF.js / pdfjs-dist"]
     PDFJS --> VIEWER
 
     VIEWER --> STATE["React Editor State"]
     SIGN --> STATE
+    PAGE --> STATE
 
-    STATE --> WATERMARK["Text and Image Watermarks"]
-    STATE --> SIGNATURE["Signature Elements"]
+    STATE --> MARKS["Watermarks and Signatures"]
+    STATE --> STORAGE["src/lib/editorStorage.ts"]
 
-    WATERMARK --> EXPORT["src/lib/pdfExport.ts"]
-    SIGNATURE --> EXPORT
+    STORAGE --> LOCAL["localStorage"]
+    STORAGE --> IDB["IndexedDB Fallback"]
 
+    MARKS --> EXPORT["src/lib/pdfExport.ts"]
     EXPORT --> PDFLIB["pdf-lib"]
     PDFLIB --> DOWNLOAD["Download Edited PDF"]
-
-    STATE <--> STORAGE["Browser Storage"]
 
     CSS["CSS Modules and Global Styles"] -.-> APP
 ```
 
+## 4. State Management
 
-## 2. State Management
+DocuCraft uses React state to manage interactive editor data and user-interface changes.
 
-DocuCraft uses React state to manage interactive editor data and UI changes.
+The state coordinates information such as the selected document, current editing mode, watermarks, signatures, selected editing elements, page-specific changes, and relevant editor settings.
 
-The state is used to coordinate information such as the selected PDF, current editing mode, watermarks, signatures, selected objects, and relevant editor settings.
+Components communicate through props and callback functions where required. When a user adds, selects, moves, resizes, rotates, edits, or deletes an element, React state updates the interface.
 
-React state updates allow the interface to respond when users add, select, move, resize, rotate, modify, or delete editing elements.
+The main editor page coordinates state restoration and autosave. Autosave must not run before the initial restoration process has completed, because saving an initial empty state could overwrite previously saved editor data.
 
-Components communicate through props and callback functions where required. This approach keeps related functionality organized and allows the interface to reflect editing changes without manually updating the page.
+## 5. PDF Loading and Rendering
 
-## 3. Rendering Approach
+DocuCraft uses PDF.js through `pdfjs-dist` to load and render PDF documents.
 
-The application uses Next.js App Router and React components to render the editor interface.
+The PDF loading workflow is:
 
-PDF documents are rendered using PDF.js through the `pdfjs-dist` library. PDF pages are displayed using canvas-based rendering, while editing controls provide the interface for working with watermarks and signatures.
+1. The user selects or drops a PDF file.
+2. `PdfUploader.tsx` handles the file input and applicable validation.
+3. The main editor coordinates loading of the selected document.
+4. PDF.js loads the document and makes its pages available.
+5. `PdfViewer.tsx` renders the current page for the editor.
+6. The editor becomes ready for editing after the applicable loading and restoration steps are handled.
 
-CSS Modules are used for component-specific styles, while global CSS provides application-wide styling.
+PDF rendering is separated from editing controls. Rendering and file-loading errors are handled so that invalid or unreadable documents are not silently treated as successfully loaded.
 
-The rendering approach separates the document preview from the editor controls and allows users to interact with the document through the application interface.
+## 6. Watermark Implementation
 
-## 4. PDF Processing
+DocuCraft supports text and image watermarks.
 
-DocuCraft uses `pdfjs-dist` to load, process, and render PDF documents in the browser.
+Users can add multiple watermarks and perform supported editing operations, including moving, resizing, rotating, modifying, and deleting elements.
 
-The PDF upload workflow includes the following steps:
+Watermark data is maintained in the editor state. The interface displays the elements over the PDF preview, while the export module applies supported watermark data to the final PDF.
 
-1. The user selects a PDF file.
-2. The application checks the selected file and attempts to load it as a PDF.
-3. PDF.js processes the document and makes its pages available for rendering.
-4. The viewer displays the document pages for editing.
-5. The user can navigate between pages and work with the available editing features.
+Watermark editing and PDF export are separate responsibilities: the preview represents the current editing state, and the export module generates the downloadable document.
 
-Loading and rendering errors are handled so that invalid or problematic documents do not silently appear as successfully loaded PDFs.
+## 7. E-Sign Implementation
 
-## 5. Watermark Implementation
+DocuCraft provides E-Sign mode alongside Watermark mode.
 
-DocuCraft supports text and image watermarks on PDF pages.
+`SignaturePad.tsx` supports drawing a signature on a canvas, clearing the canvas, using the completed signature, and selecting supported signature images.
 
-Users can add multiple watermarks and interact with them through the editor. Supported operations include moving, resizing, rotating, repositioning, modifying, and deleting watermark elements.
+After a signature is added, the editor manages its placement and supported transformations. Signatures can be assigned to different PDF pages and included in the exported document.
 
-Watermark-related information is managed by the editor and used to display the elements in the appropriate positions over the PDF preview.
+The feature provides visual signature placement. It does not, by itself, create a cryptographic digital signature or independently verify the signer's identity.
 
-The watermark implementation keeps editing interactions separate from the final PDF export process. During export, the watermark elements are incorporated into the downloadable PDF.
+## 8. PDF Export
 
-## 6. E-Sign Implementation
+PDF export is implemented in `src/lib/pdfExport.ts` using `pdf-lib`.
 
-DocuCraft provides an E-Sign mode alongside the Watermark mode.
+The export process takes the source PDF and applies supported watermark and signature elements to the appropriate pages. The implementation accounts for the relationship between PDF preview coordinates and PDF page coordinates.
 
-The `SignaturePad.tsx` component provides a canvas-based interface for drawing a signature. Users can draw a signature, clear the canvas, and use the completed signature in the editor. The implementation also supports signature image input.
+The resulting document is generated as a downloadable PDF. Export logic is separated from the main user interface to make PDF processing easier to maintain and test.
 
-After adding a signature, users can position and resize it over the PDF page. Signatures can be placed on different pages and included in the exported document.
+## 9. Editor-State Persistence and Recovery
 
-The signature feature provides visual signature placement. It does not, by itself, create a cryptographic digital signature or independently verify the signer's identity.
+The editor uses `src/lib/editorStorage.ts` to manage browser-based persistence of supported editor-state data.
 
-## 7. PDF Export Implementation
+The storage workflow is:
 
-The PDF export functionality is implemented in `src/lib/pdfExport.ts` using the `pdf-lib` library.
+1. The editor creates or updates supported editing data.
+2. The main editor saves eligible state through the storage helper.
+3. `localStorage` is used where possible.
+4. If saving to `localStorage` fails, the application attempts to use IndexedDB as a fallback.
+5. When the same original PDF is uploaded again, the application checks for matching saved editor data.
+6. Saved data is validated before restoration.
+7. Autosave becomes eligible after the restoration process has completed.
 
-The export process takes the original PDF and incorporates the applicable watermark and signature elements into the document.
+The implementation also handles malformed saved data and storage failures. If both storage methods fail, the application can display a warning rather than silently treating the save as successful.
 
-The implementation accounts for the relationship between the PDF preview coordinates and the PDF page coordinates so that editing elements can be placed correctly in the exported document.
+### Persistence Limitations
 
-After processing, the application generates a downloadable PDF file containing the original document and the applied editing elements.
+- The original PDF file is not stored by the editor-state recovery feature.
+- Users may need to upload the same original PDF again after refreshing the page.
+- Recovery depends on saved data remaining available and matching the uploaded document.
+- Clearing the site's browser data may remove saved changes.
+- Browser storage is not permanent server-side storage or cloud synchronization.
 
-The export logic is kept separate from the main UI components to make the PDF processing functionality easier to maintain and test.
+## 10. File Handling
 
-## 8. File Handling
+PDF files and supported watermark or signature images are handled through browser file input and the editor components.
 
-DocuCraft handles PDF files and the image files used for watermarks or signatures through the browser-based editor.
+The application validates supported inputs where applicable and reports errors when files cannot be read, decoded, loaded, or processed.
 
-The application validates supported input where applicable and attempts to process files before using them in the editor.
+The original PDF is used for viewing and export. Supported editor elements are maintained separately and applied during PDF export. The final edited PDF is generated for the user to download locally.
 
-PDF files are loaded for preview, while image inputs are used by the relevant watermark or signature functionality.
+## 11. Error Handling
 
-File loading and processing errors are handled to provide feedback when an input cannot be used. The final edited PDF is generated for the user to download locally.
+DocuCraft includes error handling for common document and editing failures, including:
 
-## 9. Error Handling
+- Invalid or corrupted PDF files.
+- PDF loading or page-rendering failures.
+- Unavailable canvas functionality.
+- Invalid or unreadable watermark and signature images.
+- Unsupported content during PDF export.
+- Malformed saved editor data.
+- Browser storage quota or persistence failures.
 
-DocuCraft includes error handling for common document and editing problems.
+These checks help prevent failed operations from being treated as successful and provide feedback when an operation cannot be completed.
 
-Examples include invalid or malformed PDF files, PDF loading or rendering failures, unavailable canvas functionality, invalid image inputs, and problems preparing editing elements for export.
+## 12. Testing and Maintainability
 
-Error handling helps prevent failed operations from being treated as successful and allows the application to respond to unexpected input or browser limitations.
+The project uses Playwright for browser-based end-to-end tests and unit tests for PDF export functionality.
 
-Automated tests cover important editor workflows and edge cases to help identify regressions and improve reliability.
+Tests cover key editor workflows and selected edge cases, including PDF upload, watermark and signature operations, export, saved-state validation, and browser storage failure handling.
 
+The project also uses NYC to collect code coverage for the files configured in `.nycrc.json`. Coverage results apply only to the configured source files and do not guarantee the absence of defects.
+
+The component-based structure and separate storage and export modules help keep responsibilities understandable, testable, and maintainable.

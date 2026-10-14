@@ -19,6 +19,11 @@ import PdfViewer, {
   type TextWatermark,
   type Watermark,
 } from "../components/pdf/PdfViewer";
+import {
+  deleteEditorStateFromIndexedDb,
+  loadEditorStateFromIndexedDb,
+  saveEditorStateToIndexedDb,
+} from "../lib/editorStorage";
 import { createWatermarkedPdf, downloadPdf } from "../lib/pdfExport";
 import styles from "./page.module.css";
 
@@ -39,6 +44,14 @@ type SavedEditorState = EditorSnapshot & {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function isStorageQuotaError(error: unknown): boolean {
+  return (
+    isRecord(error) &&
+    (error.name === "QuotaExceededError" ||
+      error.name === "NS_ERROR_DOM_QUOTA_REACHED")
+  );
 }
 
 function isSavedEditorObject(
@@ -257,6 +270,7 @@ function Home() {
   const undoStack = useRef<EditorSnapshot[]>([]);
   const redoStack = useRef<EditorSnapshot[]>([]);
   const restoredDocumentKey = useRef<string | null>(null);
+  const indexedDbKeys = useRef(new Set<string>());
 
   const updateHistoryAvailability = useCallback(() => {
     setHistoryAvailability({
@@ -331,7 +345,7 @@ function Home() {
   }, []);
 
   const handleDocumentLoaded = useCallback(
-    (loadedPageCount: number, fingerprint: string) => {
+    async (loadedPageCount: number, fingerprint: string) => {
       setPageCount(loadedPageCount);
       if (!file || !fingerprint) {
         setAutosaveMessage("Autosave is unavailable for this PDF.");
@@ -340,30 +354,62 @@ function Home() {
 
       setDocumentFingerprint(fingerprint);
       const storageKey = getSavedStateKey(file, fingerprint);
-      restoredDocumentKey.current = storageKey;
 
       try {
-        const savedState = window.localStorage.getItem(storageKey);
-        if (!savedState) {
+        let savedState: unknown | null = null;
+        let loadedFromIndexedDb = false;
+
+        try {
+          savedState = await loadEditorStateFromIndexedDb(storageKey);
+          loadedFromIndexedDb = savedState !== null;
+        } catch (error) {
+          console.warn(
+            "Could not read editor state from browser database storage; trying localStorage.",
+            error,
+          );
+        }
+
+        if (loadedFromIndexedDb) {
+          indexedDbKeys.current.add(storageKey);
+        } else {
+          let legacyState: string | null = null;
+          try {
+            legacyState = window.localStorage.getItem(storageKey);
+          } catch (error) {
+            console.warn("Could not read editor state from localStorage.", error);
+          }
+
+          if (legacyState) {
+            savedState = JSON.parse(legacyState);
+          }
+        }
+        if (savedState === null) {
+          restoredDocumentKey.current = storageKey;
           return;
         }
 
-        const parsedState: unknown = JSON.parse(savedState);
-        if (!isSavedEditorState(parsedState, loadedPageCount)) {
-          window.localStorage.removeItem(storageKey);
+        if (!isSavedEditorState(savedState, loadedPageCount)) {
+          if (loadedFromIndexedDb) {
+            await deleteEditorStateFromIndexedDb(storageKey);
+            indexedDbKeys.current.delete(storageKey);
+          } else {
+            window.localStorage.removeItem(storageKey);
+          }
+          restoredDocumentKey.current = storageKey;
           setAutosaveMessage("Invalid saved changes were ignored.");
           return;
         }
 
-        setWatermarks(parsedState.watermarks);
-        setSignatures(parsedState.signatures);
-        setCurrentPage(parsedState.pageNumber);
-        setSnapToGrid(parsedState.snapToGrid);
-        setZoom(parsedState.zoom);
-        setTheme(parsedState.theme);
+        setWatermarks(savedState.watermarks);
+        setSignatures(savedState.signatures);
+        setCurrentPage(savedState.pageNumber);
+        setSnapToGrid(savedState.snapToGrid);
+        setZoom(savedState.zoom);
+        setTheme(savedState.theme);
         undoStack.current = [];
         redoStack.current = [];
         setHistoryAvailability({ canUndo: false, canRedo: false });
+        restoredDocumentKey.current = storageKey;
         setAutosaveMessage("Recovered saved changes.");
       } catch (error) {
         console.error("Could not restore saved editor changes:", error);
@@ -435,24 +481,49 @@ function Home() {
     }
 
     const saveTimer = window.setTimeout(() => {
-      try {
-        window.localStorage.setItem(
-          storageKey,
-          JSON.stringify({
-            version: 1,
-            pageNumber: currentPage,
-            watermarks,
-            signatures,
-            snapToGrid,
-            zoom,
-            theme,
-          } satisfies SavedEditorState),
-        );
-        setAutosaveMessage("Changes saved in this browser.");
-      } catch (error) {
-        console.error("Could not save editor changes:", error);
-        setAutosaveMessage("Changes could not be saved in this browser.");
-      }
+      const savedState = {
+        version: 1,
+        pageNumber: currentPage,
+        watermarks,
+        signatures,
+        snapToGrid,
+        zoom,
+        theme,
+      } satisfies SavedEditorState;
+
+      void (async () => {
+        try {
+          if (indexedDbKeys.current.has(storageKey)) {
+            await saveEditorStateToIndexedDb(storageKey, savedState);
+            setAutosaveMessage(
+              "Changes saved in this browser using expanded storage.",
+            );
+            return;
+          }
+
+          try {
+            window.localStorage.setItem(storageKey, JSON.stringify(savedState));
+            setAutosaveMessage("Changes saved in this browser.");
+          } catch (error) {
+            console.warn(
+              "Could not save editor changes in localStorage; trying browser database storage.",
+              error,
+            );
+            await saveEditorStateToIndexedDb(storageKey, savedState);
+            indexedDbKeys.current.add(storageKey);
+            setAutosaveMessage(
+              "Changes saved in this browser using expanded storage.",
+            );
+          }
+        } catch (error) {
+          console.error("Could not save editor changes:", error);
+          setAutosaveMessage(
+            isStorageQuotaError(error)
+              ? "Browser storage is full. Export your edits and clear saved browser data."
+              : "Changes could not be saved in this browser. Browser storage may be unavailable.",
+          );
+        }
+      })();
     }, 400);
 
     return () => window.clearTimeout(saveTimer);

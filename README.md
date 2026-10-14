@@ -1,40 +1,65 @@
 # DocuCraft
 
-DocuCraft is a browser-based PDF watermarking and e-sign editor built with Next.js, React, and TypeScript. It uses PDF.js to display PDF documents and `pdf-lib` to generate the edited PDF for download.
+DocuCraft is a browser-based PDF Watermarking and E-Sign Editor built with Next.js, React, and TypeScript. It allows users to upload PDF documents, add and edit watermarks and signatures, and download the modified PDF.
 
-PDF processing takes place in the browser. The application does not upload the PDF to a server as part of its described editing workflow.
+PDF pages are displayed using PDF.js (`pdfjs-dist`), while `pdf-lib` is used to apply supported edits and generate the final downloadable PDF. Document editing and export take place in the browser.
+
+## Live Demo
+
+**Deployed Application:** https://docucraft-omega-three.vercel.app
 
 ## Features
 
+### PDF Viewer and Upload
+- Upload PDF documents using the file picker or supported drag-and-drop area.
+- Display PDF pages in the editor.
+- Render the current PDF page instead of mounting every page at once.
+- Cancel unnecessary PDF rendering when the page changes or the viewer closes.
+- Handle invalid, corrupted, or unsupported files with user-friendly errors.
+
+### Watermark Editor
 - Add text and image watermarks.
-- Create text signatures, draw signatures, or upload signature images.
-- Edit watermarks and signatures on different PDF pages.
-- Move, resize, and rotate editing elements using supported pointer, touch, and keyboard interactions.
+- Edit watermark text, color, and opacity.
+- Move, resize, rotate, and delete watermarks.
+- Add multiple watermarks to different PDF pages.
+- Use keyboard, pointer, and touch interactions supported by the editor.
+- Snap elements to a 5% grid and use page-center alignment guides.
+
+### E-Signature Editor
+- Create text signatures.
+- Draw signatures using the signature canvas.
+- Upload supported signature images.
+- Move, resize, rotate, and delete signatures using supported editor controls.
+- Place signatures on different PDF pages.
+
+### Editing and Export
 - Undo and redo supported editing operations.
-- Use a 5% snap grid, page-center alignment guides, and zoom controls.
-- Upload a PDF using the file picker or the supported drag-and-drop area.
+- Switch between Watermark and E-Sign modes.
+- Use zoom controls.
 - Switch between light and dark themes.
-- Render the current PDF page rather than mounting every page at once.
-- Cancel PDF.js rendering when the page changes or the viewer closes.
-- Export the edited document as a downloadable PDF.
+- Export watermarks and signatures into a downloadable PDF.
 
-### Browser-Based Editor Recovery
+## Browser-Based Editor Recovery
 
-DocuCraft can restore supported editor marks and settings in the same browser when the same PDF is uploaded again.
+DocuCraft can save supported editor changes in the current browser and restore them when the same original PDF is uploaded again.
 
-- The PDF file itself is not saved as part of the editor-state recovery feature.
-- The saved editing state is matched using PDF metadata and the PDF.js fingerprint.
-- Image marks are stored as image data in browser storage.
-- Clearing this site's browser data removes the saved edits.
+- The original PDF file itself is not saved as part of editor-state recovery.
+- Saved editor changes are matched using PDF metadata and the PDF.js fingerprint.
+- `localStorage` is used for editor-state persistence where possible.
+- If saving to `localStorage` fails, DocuCraft attempts to use IndexedDB as a fallback.
+- The application displays a warning if both storage methods fail.
+- After refreshing the page, upload the same original PDF again to restore matching saved editor changes.
+- Clearing the site's browser data may remove saved editor changes.
 
-Browser-based editor recovery is not permanent server-side storage.
+Browser-based recovery is not permanent server-side storage or cloud synchronization. Recovery also depends on the saved state remaining available and matching the uploaded PDF.
 
 ## Keyboard Shortcuts
 
 | Shortcut | Action |
 |---|---|
 | `Ctrl/Cmd + Z` | Undo |
-| `Ctrl/Cmd + Shift + Z` or `Ctrl/Cmd + Y` | Redo |
+| `Ctrl/Cmd + Shift + Z` | Redo |
+| `Ctrl/Cmd + Y` | Redo |
 | `Delete` | Delete the selected mark |
 | `Alt + =` | Zoom in |
 | `Alt + -` | Zoom out |
@@ -45,25 +70,36 @@ Shortcuts are ignored while a text field or another editable control has focus.
 
 - **Next.js** — Application framework.
 - **React** — Interactive user interface.
-- **TypeScript** — Type checking.
+- **TypeScript** — Type checking and safer development.
 - **PDF.js (`pdfjs-dist`)** — PDF loading and page rendering.
 - **`pdf-lib`** — PDF processing and export.
+- **Browser `localStorage`** — Editor-state persistence where possible.
+- **IndexedDB** — Fallback browser storage for editor state.
 - **Playwright** — Browser-based end-to-end testing.
 - **NYC** — Code coverage collection and reporting.
+- **GitHub Actions** — Continuous integration workflow.
+- **Vercel** — Application deployment.
+
+## Prerequisites
+
+Install a compatible version of Node.js and npm.
 
 ## Run Locally
 
-### Prerequisites
+### 1. Clone the Repository
 
-Install a compatible Node.js and npm version.
+```bash
+git clone https://github.com/ADEEB172/docucraft.git
+cd docucraft
+```
 
-### Install Dependencies
+### 2. Install Dependencies
 
 ```bash
 npm ci
 ```
 
-### Start the Development Server
+### 3. Start the Development Server
 
 ```bash
 npm run dev
@@ -79,7 +115,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 npm run test:unit
 ```
 
-### Run Playwright Browser Tests
+### Run Playwright End-to-End Tests
 
 ```bash
 npm run test:e2e
@@ -91,9 +127,22 @@ npm run test:e2e
 npm run test:e2e:coverage
 ```
 
-This command runs the configured Playwright and PDF export unit tests, collects coverage, and generates the HTML coverage report.
+This command runs the configured Playwright tests and PDF export unit tests, then generates a code coverage report.
 
-Open `coverage/e2e/index.html` in a browser to view the report.
+If generated at the configured location, open `coverage/e2e/index.html` in your browser to view the HTML coverage report.
+
+### Latest Recorded Test Results
+
+The latest shared test run reported:
+
+- **Playwright:** 123 tests passed.
+- **PDF export unit tests:** 15 passed, 0 failed.
+- **Statement coverage:** 93.85%.
+- **Branch coverage:** 90.37%.
+- **Function coverage:** 96.61%.
+- **Line coverage:** 93.92%.
+
+These results represent that specific run. Results may change when source code, tests, or coverage configuration changes.
 
 ### Understanding Coverage
 
@@ -102,27 +151,17 @@ Open `coverage/e2e/index.html` in a browser to view the report.
 - **Function coverage:** Measures functions that ran.
 - **Line coverage:** Measures executable source lines that ran.
 
-Coverage is limited to the application files configured in `.nycrc.json`:
-
-- `src/app/page.tsx`
-- `src/components/pdf/PdfViewer.tsx`
-- `src/components/pdf/PdfUploader.tsx`
-- `src/components/signature/SignaturePad.tsx`
-- `src/lib/pdfExport.ts`
-
-Coverage does not measure the entire project or third-party dependencies. Even 100% coverage does not prove that an application is bug-free or that every possible input produces the correct result.
+Coverage only applies to the source files included in `.nycrc.json`. It does not measure the entire project or third-party dependencies. High coverage does not guarantee that an application is bug-free.
 
 ## Production Build
 
-### Create a Production Build
+Create an optimized production build:
 
 ```bash
 npm run build
 ```
 
-This command compiles the application and checks it for production-build errors.
-
-After a successful build, run the production server with:
+Start the production server locally:
 
 ```bash
 npm run start
@@ -132,16 +171,16 @@ Open [http://localhost:3000](http://localhost:3000) to access the application.
 
 ## Continuous Integration
 
-The project includes a GitHub Actions workflow at `.github/workflows/ci.yml`.
+The repository includes a GitHub Actions workflow at `.github/workflows/ci.yml`.
 
-The configured workflow is intended to automate checks such as PDF export unit tests, Playwright browser tests, and the production build for pushes and pull requests. It also installs Chromium for Playwright testing.
+The workflow is configured to run the project's automated checks, including the relevant tests and production build, for its configured GitHub events.
 
-Successful local tests do not automatically mean that the remote GitHub Actions workflow has been verified. Check the workflow's run status in GitHub Actions after pushing the project.
+To verify the remote checks, open the repository's **Actions** tab and confirm that the latest workflow run completed successfully.
 
 ## Project Documentation
 
 Additional documentation is available in the `docs/` directory:
 
-- `docs/architecture.md` — Application architecture and component responsibilities.
-- `docs/data-flow.md` — Data flow from PDF upload through editing and export.
-- `docs/ai-usage.md` — AI-assisted development and implementation notes.
+- [`docs/architecture.md`](docs/architecture.md) — Application architecture and component responsibilities.
+- [`docs/data-flow.md`](docs/data-flow.md) — PDF upload, editor-state recovery, editing, persistence, and export flow.
+- [`docs/ai-usage.md`](docs/ai-usage.md) — AI-assisted development, implementation notes, and verification.

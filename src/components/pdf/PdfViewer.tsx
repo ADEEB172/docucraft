@@ -34,7 +34,10 @@ type PdfViewerProps = {
   snapToGrid: boolean;
   onZoomChange: (zoom: number) => void;
   onInteractionStart: () => void;
-  onDocumentLoaded: (pageCount: number, fingerprint: string) => void;
+  onDocumentLoaded: (
+    pageCount: number,
+    fingerprint: string,
+  ) => void | Promise<void>;
   onLoadStateChange: (isLoading: boolean) => void;
   onPageChange: (pageNumber: number) => void;
   onPageScaleChange: (pageNumber: number, scale: number) => void;
@@ -311,7 +314,10 @@ export default function PdfViewer({
         setIsRendering(true);
 
         // Inform the parent component
-        onDocumentLoaded(document.numPages, document.fingerprints[0] ?? "");
+        await onDocumentLoaded(
+          document.numPages,
+          document.fingerprints[0] ?? "",
+        );
         onLoadStateChange(false);
       } catch (error) {
         if (cancelled || isCancellationError(error)) {

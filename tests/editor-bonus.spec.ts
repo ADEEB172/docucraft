@@ -642,6 +642,158 @@ test("restores saved page-specific edits after re-uploading the same PDF", async
   await expect(page.locator('[data-theme="dark"]')).toBeVisible();
 });
 
+test("saves and restores editor changes when localStorage is full", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const originalSetItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key, value) {
+      if (key.startsWith("docucraft-editor-v1:")) {
+        throw new DOMException("Storage quota exceeded.", "QuotaExceededError");
+      }
+
+      originalSetItem.call(this, key, value);
+    };
+  });
+
+  const bytes = await createPdf();
+  const stableModifiedDate = 1_760_000_000_000;
+  await page.goto("/");
+  await dropPdf(page, bytes, "quota-save.pdf", stableModifiedDate);
+  await expect(page.getByLabel("PDF page 1 of 1")).toBeVisible();
+  await page.getByRole("button", { name: "Watermark" }).click();
+  await addTextWatermark(page, "QUOTA RECOVERY MARK");
+  await page.getByRole("button", { name: "E-Sign" }).click();
+  await page.getByLabel("New text signature").fill("QUOTA RECOVERY SIGNATURE");
+  await page.getByRole("button", { name: "Add text signature" }).click();
+
+  await page.waitForFunction(
+    () =>
+      new Promise<boolean>((resolve) => {
+        const openRequest = window.indexedDB.open("docucraft-editor", 1);
+        openRequest.onerror = () => resolve(false);
+        openRequest.onsuccess = () => {
+          const database = openRequest.result;
+          const request = database
+            .transaction("savedStates", "readonly")
+            .objectStore("savedStates")
+            .getAll();
+          request.onerror = () => {
+            database.close();
+            resolve(false);
+          };
+          request.onsuccess = () => {
+            const records: unknown = request.result;
+            const saved = Array.isArray(records) && records.some((record) => {
+              if (
+                typeof record !== "object" ||
+                record === null ||
+                !("value" in record)
+              ) {
+                return false;
+              }
+
+              const state = record.value;
+              if (
+                typeof state !== "object" ||
+                state === null ||
+                !("watermarks" in state) ||
+                !("signatures" in state)
+              ) {
+                return false;
+              }
+
+              const hasMark =
+                Array.isArray(state.watermarks) &&
+                state.watermarks.some(
+                  (item: unknown) =>
+                    typeof item === "object" &&
+                    item !== null &&
+                    "text" in item &&
+                    item.text === "QUOTA RECOVERY MARK",
+                );
+              const hasSignature =
+                Array.isArray(state.signatures) &&
+                state.signatures.some(
+                  (item: unknown) =>
+                    typeof item === "object" &&
+                    item !== null &&
+                    "text" in item &&
+                    item.text === "QUOTA RECOVERY SIGNATURE",
+                );
+              return hasMark && hasSignature;
+            });
+
+            database.close();
+            resolve(saved);
+          };
+        };
+      }),
+    undefined,
+    { timeout: 10_000 },
+  );
+  await expect(page.getByText("Changes saved in this browser using expanded storage.")).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        Object.keys(window.localStorage).some((key) =>
+          key.startsWith("docucraft-editor-v1:"),
+        ),
+      ),
+    )
+    .toBe(false);
+
+  await page.reload();
+  await expect(
+    page.getByText(/same PDF again after refreshing/),
+  ).toBeVisible();
+  await dropPdf(page, bytes, "quota-save.pdf", stableModifiedDate);
+  await expect(
+    page.getByRole("group", { name: "Text watermark: QUOTA RECOVERY MARK" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("group", {
+      name: "Text signature: QUOTA RECOVERY SIGNATURE",
+    }),
+  ).toBeVisible();
+});
+
+test("shows a storage warning if localStorage and expanded storage both fail", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const originalSetItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key, value) {
+      if (key.startsWith("docucraft-editor-v1:")) {
+        throw new DOMException("Storage quota exceeded.", "QuotaExceededError");
+      }
+
+      originalSetItem.call(this, key, value);
+    };
+
+    const originalOpen = IDBFactory.prototype.open;
+    IDBFactory.prototype.open = function (name, version) {
+      if (name === "docucraft-editor") {
+        throw new DOMException("Storage quota exceeded.", "QuotaExceededError");
+      }
+
+      return originalOpen.call(this, name, version);
+    };
+  });
+
+  await page.goto("/");
+  await dropPdf(page, await createPdf(), "full-storage.pdf");
+  await expect(page.getByLabel("PDF page 1 of 1")).toBeVisible();
+  await page.getByRole("button", { name: "Watermark" }).click();
+  await addTextWatermark(page, "UNSAVED MARK");
+
+  await expect(
+    page.getByText(
+      "Browser storage is full. Export your edits and clear saved browser data.",
+    ),
+  ).toBeVisible();
+});
+
 test("ignores malformed saved editor data instead of restoring it", async ({
   page,
 }) => {
