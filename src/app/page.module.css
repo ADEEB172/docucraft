@@ -145,7 +145,7 @@
 .editorLayout {
   display: grid;
   flex: 1;
-  grid-template-columns: 88px minmax(0, 1fr) 286px;
+  grid-template-columns: 140px minmax(0, 1fr) 286px;
 }
 
 .toolbar {
@@ -638,7 +638,7 @@
 
 @media (max-width: 960px) {
   .editorLayout {
-    grid-template-columns: 76px minmax(0, 1fr);
+    grid-template-columns: 120px minmax(0, 1fr);
   }
 
   .properties {
