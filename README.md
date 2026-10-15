@@ -8,9 +8,12 @@ PDF pages are displayed using PDF.js (`pdfjs-dist`), while `pdf-lib` is used to 
 
 **Deployed Application:** https://docucraft-omega-three.vercel.app
 
+**GitHub Repository:** https://github.com/ADEEB172/docucraft
+
 ## Features
 
 ### PDF Viewer and Upload
+
 - Upload PDF documents using the file picker or supported drag-and-drop area.
 - Display PDF pages in the editor.
 - Render the current PDF page instead of mounting every page at once.
@@ -18,6 +21,7 @@ PDF pages are displayed using PDF.js (`pdfjs-dist`), while `pdf-lib` is used to 
 - Handle invalid, corrupted, or unsupported files with user-friendly errors.
 
 ### Watermark Editor
+
 - Add text and image watermarks.
 - Edit watermark text, color, and opacity.
 - Move, resize, rotate, and delete watermarks.
@@ -26,6 +30,7 @@ PDF pages are displayed using PDF.js (`pdfjs-dist`), while `pdf-lib` is used to 
 - Snap elements to a 5% grid and use page-center alignment guides.
 
 ### E-Signature Editor
+
 - Create text signatures.
 - Draw signatures using the signature canvas.
 - Upload supported signature images.
@@ -33,6 +38,7 @@ PDF pages are displayed using PDF.js (`pdfjs-dist`), while `pdf-lib` is used to 
 - Place signatures on different PDF pages.
 
 ### Editing and Export
+
 - Undo and redo supported editing operations.
 - Switch between Watermark and E-Sign modes.
 - Use zoom controls.
@@ -133,16 +139,16 @@ If generated at the configured location, open `coverage/e2e/index.html` in your 
 
 ### Latest Recorded Test Results
 
-The latest shared test run reported:
+The latest recorded run reported:
 
 - **Playwright:** 123 tests passed.
 - **PDF export unit tests:** 15 passed, 0 failed.
-- **Statement coverage:** 93.85%.
+- **Statement coverage:** 94.03%.
 - **Branch coverage:** 90.37%.
 - **Function coverage:** 96.61%.
-- **Line coverage:** 93.92%.
+- **Line coverage:** 94.1%.
 
-These results represent that specific run. Results may change when source code, tests, or coverage configuration changes.
+These results represent a specific test run. Results may change when source code, tests, or coverage configuration changes.
 
 ### Understanding Coverage
 
@@ -175,7 +181,7 @@ The repository includes a GitHub Actions workflow at `.github/workflows/ci.yml`.
 
 The workflow is configured to run the project's automated checks, including the relevant tests and production build, for its configured GitHub events.
 
-To verify the remote checks, open the repository's **Actions** tab and confirm that the latest workflow run completed successfully.
+To verify the remote checks, open the repository's [Actions tab](https://github.com/ADEEB172/docucraft/actions) and confirm that the latest workflow run completed successfully.
 
 ## Project Documentation
 
