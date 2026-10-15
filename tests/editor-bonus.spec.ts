@@ -747,10 +747,24 @@ test("saves and restores editor changes when localStorage is full", async ({
   await expect(
     page.getByText(/same PDF again after refreshing/),
   ).toBeVisible();
-  await dropPdf(page, bytes, "quota-save.pdf", stableModifiedDate);
-  await expect(
-    page.getByRole("group", { name: "Text watermark: QUOTA RECOVERY MARK" }),
-  ).toBeVisible();
+await dropPdf(page, bytes, "quota-save.pdf", stableModifiedDate);
+
+await expect(page.getByLabel("PDF page 1 of 1")).toBeVisible();
+
+await expect(
+  page.getByText("Recovered saved changes."),
+).toBeVisible({ timeout: 10000 });
+
+await expect(
+  page.getByRole("group", { name: "Text watermark: QUOTA RECOVERY MARK" }),
+).toBeVisible();
+
+await expect(
+  page.getByRole("group", {
+    name: "Text signature: QUOTA RECOVERY SIGNATURE",
+  }),
+).toBeVisible();
+
   await expect(
     page.getByRole("group", {
       name: "Text signature: QUOTA RECOVERY SIGNATURE",

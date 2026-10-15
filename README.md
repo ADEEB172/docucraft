@@ -143,10 +143,10 @@ The latest recorded run reported:
 
 - **Playwright:** 123 tests passed.
 - **PDF export unit tests:** 15 passed, 0 failed.
-- **Statement coverage:** 94.03%.
-- **Branch coverage:** 90.37%.
+- **Statement coverage:** 94.12%.
+- **Branch coverage:** 90.5%.
 - **Function coverage:** 96.61%.
-- **Line coverage:** 94.1%.
+- **Line coverage:** 94.2%.
 
 These results represent a specific test run. Results may change when source code, tests, or coverage configuration changes.
 

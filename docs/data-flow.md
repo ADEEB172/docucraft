@@ -206,10 +206,10 @@ The latest reported test run completed:
 
 The reported code coverage was:
 
-- Statements: 94.03%
-- Branches: 90.37%
-- Functions: 96.61%
-- Lines: 94.1%
+- **Statement coverage:** 94.12%.
+- **Branch coverage:** 90.5%.
+- **Function coverage:** 96.61%.
+- **Line coverage:** 94.2%.
 
 These figures apply to the configured coverage scope and do not necessarily represent every file in the repository.
 
